@@ -1,0 +1,72 @@
+schema: spec-driven
+
+# Project context (optional)
+# This is shown to AI when creating artifacts.
+context: |
+  Business context:
+  Note Taking App: a centralized system for authenticated users to create, organize,
+  search, and share personal notes. Supports rich-text editing, user-scoped tags,
+  full-text search, public read-only sharing, and note version history. Out of scope:
+  real-time collaboration, file/image attachments, mobile apps, OAuth/social login,
+  note folders/nested organization, and real email delivery (password-reset OTPs are
+  logged to the console instead of being emailed).
+
+  Tech stack:
+  pnpm workspace monorepo: backend/ (Express 5, Node.js 22, TypeScript strict, Prisma
+  Client, PostgreSQL 16, Pino/Pino-http, express-rate-limit); frontend/ (React 19,
+  Vite, TanStack Query, Zustand, TipTap, TailwindCSS, DOMPurify); packages/shared/
+  (Zod schemas and TypeScript DTOs consumed by both workspaces). Testing: Vitest +
+  Supertest (backend integration), Vitest + React Testing Library + MSW (frontend
+  components), Playwright (E2E). Tooling: Husky + lint-staged, commitlint, OpenSpec,
+  context7 MCP for live library docs. Dependency versions are pinned; no `@latest`
+  installs and no technology substitutions.
+
+  Architecture constraints:
+  No database models/entities are exposed directly to the frontend — all HTTP data
+  uses DTOs from packages/shared. Auth uses JWT access tokens (15 min, Authorization
+  header) plus refresh tokens (7 days, HTTP-only/Secure/SameSite cookie, persisted
+  and rotated in the DB). Soft delete is implemented at the service layer via
+  Note.deletedAt with a 30-day recovery window before permanent purge. No API
+  versioning — all routes are prefixed directly with /api. Express middleware order
+  is fixed: helmet -> cors -> express.json -> cookieParser -> requestLogger (pino-http)
+  -> rate limiters -> authenticateToken -> routes -> global error handler. Full-text
+  search uses native PostgreSQL tsvector/ts_headline with a GIN index (no external
+  search engine). Frontend state is split: TanStack Query for server state, Zustand
+  only for client UI state (AuthStore, NoteStore, EditorStore).
+
+  Team conventions:
+  Conventional Commits; feat/fix commits must reference an Azure Boards ticket, e.g.
+  `feat(scope): description AB#1001` / `fix(scope): description AB#1002`. Branches
+  follow `<type>/<domain>/AB-<ticket>-<short-description>`, e.g.
+  `feature/backend/AB-1002-auth`. One ticket per Claude session; clear context
+  between tickets; compact context at ~70% usage. Independent parallel tasks (e.g.
+  frontend/backend in parallel) use separate git worktrees. Prefer editing existing
+  files over creating new ones; do not add docs/README files unless requested.
+
+  Quality standards:
+  Quality gates run in strict order and must all pass: `pnpm build` (0 errors/
+  warnings) -> `pnpm lint --max-warnings 0` -> `pnpm test`. TypeScript is strict;
+  `any` must never be used to bypass type safety. New code must maintain at least
+  80% automated test coverage. Every approved FRS acceptance-criteria scenario maps
+  to exactly one uniquely named automated test. Code with a failing build, lint
+  error, or failing test must never be committed. Happy-path and defined error
+  scenarios are manually smoke tested before a ticket is considered complete.
+
+  Spec-driven workflow conventions:
+  Every ticket follows Proposal -> Plan -> Tasks -> Implementation -> Review ->
+  Archive, with each stage reviewed and approved before the next begins. Tickets
+  are implemented strictly in the FRS mandatory sequence (AB-1001 through AB-1016)
+  — no skipping or reordering. A fresh-session, read-only compliance review must
+  report zero missing scenarios, spec drift, or security findings before a pull
+  request. The completed OpenSpec change must be archived
+  (`openspec archive AB-xxxx`) before a pull request is raised.
+
+# Per-artifact rules (optional)
+# Add custom rules for specific artifacts.
+# Example:
+#   rules:
+#     proposal:
+#       - Keep proposals under 500 words
+#       - Always include a "Non-goals" section
+#     tasks:
+#       - Break tasks into chunks of max 2 hours
