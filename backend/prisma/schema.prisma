@@ -1,0 +1,97 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id              String         @id @default(uuid())
+  email           String         @unique // Handled case-insensitively at the application layer
+  passwordHash    String
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  resetOtpHash    String?        // Securely hashed password reset OTP
+  resetOtpExpires DateTime?
+  notes           Note[]
+  tags            Tag[]
+  refreshTokens   RefreshToken[]
+}
+
+model RefreshToken {
+  id        String   @id @default(uuid())
+  tokenHash String   @unique // Cryptographically hashed (SHA-256) refresh token
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+}
+
+model Note {
+  id         String        @id @default(uuid())
+  title      String
+  content    Json          // Store TipTap editor JSON document representation
+  bodyText   String        @db.Text // Extracted plain-text content used for search indexing
+  userId     String
+  user       User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  deletedAt  DateTime?     // Null = active, Timestamp = soft-deleted
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @updatedAt
+  tags       NoteTag[]
+  versions   NoteVersion[]
+  shareLinks ShareLink[]
+
+  @@index([userId])
+  @@index([deletedAt])
+  @@index([createdAt])
+  @@index([updatedAt])
+}
+
+model Tag {
+  id        String    @id @default(uuid())
+  name      String
+  color     String
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  notes     NoteTag[]
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@unique([name, userId]) // Tag names unique per user
+}
+
+model NoteTag {
+  noteId String
+  note   Note   @relation(fields: [noteId], references: [id], onDelete: Cascade)
+  tagId  String
+  tag    Tag    @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([noteId, tagId])
+}
+
+model ShareLink {
+  id        String    @id @default(uuid())
+  noteId    String
+  note      Note      @relation(fields: [noteId], references: [id], onDelete: Cascade)
+  tokenHash String    @unique // Hashed (SHA-256) version of the public token
+  expiresAt DateTime  // Expiration date (defaults to 7 days from generation)
+  viewCount Int       @default(0)
+  revoked   Boolean   @default(false)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@index([noteId])
+}
+
+model NoteVersion {
+  id        String   @id @default(uuid())
+  noteId    String
+  note      Note     @relation(fields: [noteId], references: [id], onDelete: Cascade)
+  title     String
+  content   Json     // TipTap editor JSON snapshot
+  bodyText  String   @db.Text // Plain-text content snapshot
+  version   Int      // Incremental version number starting at 1
+  savedAt   DateTime @default(now()) // Timestamp of snapshot creation
+}

@@ -1,0 +1,24 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+build/
+*.tsbuildinfo
+
+# Environment files
+.env
+.env.local
+
+# Test / coverage output
+coverage/
+test-results/
+playwright-report/
+blob-report/
+
+# Prisma
+backend/prisma/generated/
+
+# Editor / OS
+.DS_Store
+*.log
