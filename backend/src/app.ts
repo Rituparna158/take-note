@@ -6,6 +6,7 @@ import helmet from "helmet";
 import { pinoHttp } from "pino-http";
 
 import { errorHandler, notFoundHandler } from "./middleware/errorHandler.js";
+import { authRouter } from "./routes/auth.js";
 
 export function createApp(): Express {
   const app = express();
@@ -28,7 +29,21 @@ export function createApp(): Express {
   app.use(cookieParser());
 
   // 5. Request logging
-  app.use(pinoHttp());
+  app.use(
+    pinoHttp({
+      redact: {
+        paths: [
+          "req.headers.authorization",
+          "req.headers.cookie",
+          "req.body.password",
+          "req.body.newPassword",
+          "req.body.otp",
+          'res.headers["set-cookie"]',
+        ],
+        censor: "[Redacted]",
+      },
+    }),
+  );
 
   // 6. Rate limiting (standard authenticated-API baseline; per-endpoint limiters are
   // added alongside their routes starting with AB-1002)
@@ -41,7 +56,8 @@ export function createApp(): Express {
     }),
   );
 
-  // --- AB-1002+ inserts `authenticateToken` and the `/api/<domain>` routers here ---
+  // 7. API routes (authenticateToken is applied per-route inside each router, not globally)
+  app.use("/api/auth", authRouter);
 
   app.get("/api/health", (_req, res) => {
     res.status(200).json({ status: "ok" });
