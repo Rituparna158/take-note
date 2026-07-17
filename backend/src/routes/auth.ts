@@ -1,16 +1,24 @@
-import { loginRequestSchema, registerRequestSchema } from "@take-note/shared";
+import {
+  forgotPasswordRequestSchema,
+  loginRequestSchema,
+  registerRequestSchema,
+  resetPasswordRequestSchema,
+} from "@take-note/shared";
 import { Router, type Request, type Response } from "express";
 
 import { authenticateToken } from "../middleware/authenticateToken.js";
 import {
+  forgotPasswordLimiter,
   loginLimiter,
   logoutLimiter,
   refreshLimiter,
   registerLimiter,
+  resetPasswordLimiter,
 } from "../middleware/authRateLimiters.js";
 import { AppError } from "../middleware/errorHandler.js";
 import { loginUser, logoutUser, refreshSession, registerUser } from "../services/authService.js";
 import type { AuthResult } from "../services/authService.js";
+import { requestPasswordReset, resetPassword } from "../services/passwordResetService.js";
 
 const REFRESH_COOKIE_NAME = "refreshToken";
 const REFRESH_COOKIE_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
@@ -102,3 +110,35 @@ authRouter.post(
     res.status(200).json({ message: "Logged out successfully" });
   },
 );
+
+authRouter.post("/forgot-password", forgotPasswordLimiter, async (req: Request, res: Response) => {
+  const parsed = forgotPasswordRequestSchema.safeParse(req.body);
+  if (!parsed.success) {
+    throw new AppError(
+      400,
+      "VALIDATION_ERROR",
+      "Invalid forgot-password payload",
+      zodIssuesToFields(parsed.error.issues),
+    );
+  }
+
+  await requestPasswordReset(parsed.data.email);
+  res.status(200).json({
+    message: "If this email is registered, a password reset code has been generated.",
+  });
+});
+
+authRouter.post("/reset-password", resetPasswordLimiter, async (req: Request, res: Response) => {
+  const parsed = resetPasswordRequestSchema.safeParse(req.body);
+  if (!parsed.success) {
+    throw new AppError(
+      400,
+      "VALIDATION_ERROR",
+      "Invalid reset-password payload",
+      zodIssuesToFields(parsed.error.issues),
+    );
+  }
+
+  await resetPassword(parsed.data.email, parsed.data.otp, parsed.data.newPassword);
+  res.status(200).json({ message: "Password reset successful" });
+});

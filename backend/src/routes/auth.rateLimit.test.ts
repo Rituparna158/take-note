@@ -37,3 +37,35 @@ describe("login rate limiting", () => {
     expect((lastResponse?.body as ErrorBody | undefined)?.code).toBe("RATE_LIMIT_EXCEEDED");
   });
 });
+
+describe("forgot-password rate limiting", () => {
+  it("returns 429 RATE_LIMIT_EXCEEDED once the forgot-password limiter threshold is exceeded for the same email", async () => {
+    const email = "forgot-password-rate-limit-test@example.com";
+
+    let lastResponse;
+    for (let attempt = 0; attempt < 4; attempt += 1) {
+      lastResponse = await request(app).post("/api/auth/forgot-password").send({ email });
+    }
+
+    expect(lastResponse?.status).toBe(429);
+    expect((lastResponse?.body as ErrorBody | undefined)?.code).toBe("RATE_LIMIT_EXCEEDED");
+  });
+});
+
+describe("reset-password rate limiting", () => {
+  it("returns 429 RATE_LIMIT_EXCEEDED once the reset-password limiter threshold is exceeded", async () => {
+    const payload = {
+      email: "reset-password-rate-limit-test@example.com",
+      otp: "000000",
+      newPassword: "wrongPassword1",
+    };
+
+    let lastResponse;
+    for (let attempt = 0; attempt < 6; attempt += 1) {
+      lastResponse = await request(app).post("/api/auth/reset-password").send(payload);
+    }
+
+    expect(lastResponse?.status).toBe(429);
+    expect((lastResponse?.body as ErrorBody | undefined)?.code).toBe("RATE_LIMIT_EXCEEDED");
+  });
+});
