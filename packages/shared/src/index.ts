@@ -5,5 +5,16 @@ export {
   loginRequestSchema,
   authUserSchema,
   authResponseSchema,
+  forgotPasswordRequestSchema,
+  resetPasswordRequestSchema,
+  messageResponseSchema,
 } from "./auth/schemas.js";
-export type { RegisterRequest, LoginRequest, AuthUser, AuthResponse } from "./auth/schemas.js";
+export type {
+  RegisterRequest,
+  LoginRequest,
+  AuthUser,
+  AuthResponse,
+  ForgotPasswordRequest,
+  ResetPasswordRequest,
+  MessageResponse,
+} from "./auth/schemas.js";
