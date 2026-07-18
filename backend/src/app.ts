@@ -8,6 +8,7 @@ import { pinoHttp } from "pino-http";
 import { errorHandler, notFoundHandler } from "./middleware/errorHandler.js";
 import { authRouter } from "./routes/auth.js";
 import { notesRouter } from "./routes/notes.js";
+import { tagsRouter } from "./routes/tags.js";
 
 export function createApp(): Express {
   const app = express();
@@ -64,6 +65,7 @@ export function createApp(): Express {
   // 7. API routes (authenticateToken is applied per-route inside each router, not globally)
   app.use("/api/auth", authRouter);
   app.use("/api/notes", notesRouter);
+  app.use("/api/tags", tagsRouter);
 
   app.get("/api/health", (_req, res) => {
     res.status(200).json({ status: "ok" });

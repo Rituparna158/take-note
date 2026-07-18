@@ -46,6 +46,11 @@ const validNotePayload = {
   },
 };
 
+async function createTagForUser(userId: string, name: string): Promise<string> {
+  const tag = await prisma.tag.create({ data: { name, color: "#ff0000", userId } });
+  return tag.id;
+}
+
 describe("POST /api/notes", () => {
   it("creates a note with valid title and rich-text content when authenticated", async () => {
     const { accessToken } = await registerAndGetToken(uniqueEmail());
@@ -87,5 +92,33 @@ describe("POST /api/notes", () => {
 
     expect(response.status).toBe(401);
     expect((response.body as ErrorBody).code).toBe("UNAUTHORIZED");
+  });
+
+  it("creates a note associated with tags owned by the authenticated user", async () => {
+    const { accessToken, userId } = await registerAndGetToken(uniqueEmail());
+    const tagId = await createTagForUser(userId, "Work");
+
+    const response = await request(app)
+      .post("/api/notes")
+      .set("Authorization", `Bearer ${accessToken}`)
+      .send({ ...validNotePayload, tagIds: [tagId] });
+
+    expect(response.status).toBe(201);
+    const body = response.body as NoteResponse;
+    expect(body.tags).toEqual([{ id: tagId, name: "Work", color: "#ff0000" }]);
+  });
+
+  it("rejects note creation when a tagIds entry is not owned by the user", async () => {
+    const owner = await registerAndGetToken(uniqueEmail());
+    const other = await registerAndGetToken(uniqueEmail());
+    const otherTagId = await createTagForUser(other.userId, "Not Mine");
+
+    const response = await request(app)
+      .post("/api/notes")
+      .set("Authorization", `Bearer ${owner.accessToken}`)
+      .send({ ...validNotePayload, tagIds: [otherTagId] });
+
+    expect(response.status).toBe(422);
+    expect((response.body as ErrorBody).code).toBe("CONFLICT");
   });
 });

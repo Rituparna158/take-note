@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { tagResponseSchema } from "../tags/schemas.js";
+
 export const tiptapMarkSchema = z.object({
   type: z.string(),
   attrs: z.record(z.string(), z.unknown()).optional(),
@@ -26,12 +28,14 @@ export type TiptapDocument = z.infer<typeof tiptapDocumentSchema>;
 export const createNoteRequestSchema = z.object({
   title: z.string().trim().min(1),
   content: tiptapDocumentSchema,
+  tagIds: z.array(z.uuid()).optional(),
 });
 export type CreateNoteRequest = z.infer<typeof createNoteRequestSchema>;
 
 export const updateNoteRequestSchema = z.object({
   title: z.string().trim().min(1),
   content: tiptapDocumentSchema,
+  tagIds: z.array(z.uuid()).optional(),
 });
 export type UpdateNoteRequest = z.infer<typeof updateNoteRequestSchema>;
 
@@ -41,6 +45,7 @@ export const noteResponseSchema = z.object({
   content: tiptapDocumentSchema,
   createdAt: z.iso.datetime(),
   updatedAt: z.iso.datetime(),
+  tags: z.array(tagResponseSchema),
 });
 export type NoteResponse = z.infer<typeof noteResponseSchema>;
 

@@ -41,3 +41,18 @@ export type {
   NoteListResponse,
   ListNotesQuery,
 } from "./notes/schemas.js";
+
+export {
+  createTagRequestSchema,
+  updateTagRequestSchema,
+  tagResponseSchema,
+  tagWithCountResponseSchema,
+  tagListResponseSchema,
+} from "./tags/schemas.js";
+export type {
+  CreateTagRequest,
+  UpdateTagRequest,
+  TagResponse,
+  TagWithCountResponse,
+  TagListResponse,
+} from "./tags/schemas.js";

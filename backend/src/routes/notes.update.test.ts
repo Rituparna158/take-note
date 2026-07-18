@@ -67,6 +67,11 @@ async function createNote(accessToken: string): Promise<NoteResponse> {
   return response.body as NoteResponse;
 }
 
+async function createTagForUser(userId: string, name: string): Promise<string> {
+  const tag = await prisma.tag.create({ data: { name, color: "#ff0000", userId } });
+  return tag.id;
+}
+
 describe("PUT /api/notes/:id", () => {
   it("saves changes to the title and content of a user's own active note", async () => {
     const { accessToken } = await registerAndGetToken(uniqueEmail());
@@ -119,5 +124,53 @@ describe("PUT /api/notes/:id", () => {
 
     expect(response.status).toBe(404);
     expect((response.body as ErrorBody).code).toBe("NOT_FOUND");
+  });
+
+  it("replaces a note's tags with a new set of tags owned by the authenticated user", async () => {
+    const { accessToken, userId } = await registerAndGetToken(uniqueEmail());
+    const note = await createNote(accessToken);
+    const oldTagId = await createTagForUser(userId, "Old");
+    const newTagId = await createTagForUser(userId, "New");
+    await prisma.noteTag.create({ data: { noteId: note.id, tagId: oldTagId } });
+
+    const response = await request(app)
+      .put(`/api/notes/${note.id}`)
+      .set("Authorization", `Bearer ${accessToken}`)
+      .send({ ...updatedNotePayload, tagIds: [newTagId] });
+
+    expect(response.status).toBe(200);
+    const body = response.body as NoteResponse;
+    expect(body.tags).toEqual([{ id: newTagId, name: "New", color: "#ff0000" }]);
+  });
+
+  it("leaves existing tags untouched when tagIds is omitted from the update", async () => {
+    const { accessToken, userId } = await registerAndGetToken(uniqueEmail());
+    const note = await createNote(accessToken);
+    const tagId = await createTagForUser(userId, "Keep Me");
+    await prisma.noteTag.create({ data: { noteId: note.id, tagId } });
+
+    const response = await request(app)
+      .put(`/api/notes/${note.id}`)
+      .set("Authorization", `Bearer ${accessToken}`)
+      .send(updatedNotePayload);
+
+    expect(response.status).toBe(200);
+    const body = response.body as NoteResponse;
+    expect(body.tags).toEqual([{ id: tagId, name: "Keep Me", color: "#ff0000" }]);
+  });
+
+  it("rejects a tag update when a tagIds entry is not owned by the user", async () => {
+    const owner = await registerAndGetToken(uniqueEmail());
+    const other = await registerAndGetToken(uniqueEmail());
+    const note = await createNote(owner.accessToken);
+    const otherTagId = await createTagForUser(other.userId, "Not Mine");
+
+    const response = await request(app)
+      .put(`/api/notes/${note.id}`)
+      .set("Authorization", `Bearer ${owner.accessToken}`)
+      .send({ ...updatedNotePayload, tagIds: [otherTagId] });
+
+    expect(response.status).toBe(422);
+    expect((response.body as ErrorBody).code).toBe("CONFLICT");
   });
 });

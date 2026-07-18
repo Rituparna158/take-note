@@ -239,6 +239,21 @@ describe("GET /api/notes - tag filtering", () => {
     expect(body.meta.totalCount).toBe(0);
   });
 
+  it("includes each note's associated tags in the list response", async () => {
+    const { accessToken, userId } = await registerAndGetToken(uniqueEmail());
+    const note = await createNote(accessToken, "Tagged Note");
+    const tagId = await createTagForUser(userId, "Work");
+    await attachTagToNote(note.id, tagId);
+
+    const response = await request(app)
+      .get("/api/notes")
+      .set("Authorization", `Bearer ${accessToken}`);
+
+    expect(response.status).toBe(200);
+    const body = response.body as NoteListResponse;
+    expect(body.data[0]?.tags).toEqual([{ id: tagId, name: "Work", color: "#ff0000" }]);
+  });
+
   it("paginates filtered results across multiple pages", async () => {
     const { accessToken, userId } = await registerAndGetToken(uniqueEmail());
     const tagId = await createTagForUser(userId, "Shared");

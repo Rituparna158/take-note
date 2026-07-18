@@ -20,7 +20,7 @@ afterAll(async () => {
 });
 
 function uniqueEmail(): string {
-  return `notes-read-test-${randomUUID()}@example.com`;
+  return `tags-delete-test-${randomUUID()}@example.com`;
 }
 
 async function registerAndGetToken(
@@ -33,24 +33,17 @@ async function registerAndGetToken(
   return { accessToken: body.accessToken, userId: body.user.id };
 }
 
-const validNotePayload = {
-  title: "Read Test Note",
-  content: {
-    type: "doc",
-    content: [
-      {
-        type: "paragraph",
-        content: [{ type: "text", text: "Hello world" }],
-      },
-    ],
-  },
-};
-
-async function createNote(accessToken: string): Promise<NoteResponse> {
+async function createNote(accessToken: string, title: string): Promise<NoteResponse> {
   const response = await request(app)
     .post("/api/notes")
     .set("Authorization", `Bearer ${accessToken}`)
-    .send(validNotePayload);
+    .send({
+      title,
+      content: {
+        type: "doc",
+        content: [{ type: "paragraph", content: [{ type: "text", text: title }] }],
+      },
+    });
   return response.body as NoteResponse;
 }
 
@@ -59,60 +52,69 @@ async function createTagForUser(userId: string, name: string): Promise<string> {
   return tag.id;
 }
 
-describe("GET /api/notes/:id", () => {
-  it("returns a user's own active note", async () => {
-    const { accessToken } = await registerAndGetToken(uniqueEmail());
-    const note = await createNote(accessToken);
+async function attachTagToNote(noteId: string, tagId: string): Promise<void> {
+  await prisma.noteTag.create({ data: { noteId, tagId } });
+}
 
-    const response = await request(app)
-      .get(`/api/notes/${note.id}`)
-      .set("Authorization", `Bearer ${accessToken}`);
-
-    expect(response.status).toBe(200);
-    const body = response.body as NoteResponse;
-    expect(body.id).toBe(note.id);
-    expect(body.title).toBe(validNotePayload.title);
-  });
-
-  it("returns the note's associated tags", async () => {
+describe("DELETE /api/tags/:id", () => {
+  it("removes the caller's own tag", async () => {
     const { accessToken, userId } = await registerAndGetToken(uniqueEmail());
-    const note = await createNote(accessToken);
     const tagId = await createTagForUser(userId, "Work");
-    await prisma.noteTag.create({ data: { noteId: note.id, tagId } });
+
+    const response = await request(app)
+      .delete(`/api/tags/${tagId}`)
+      .set("Authorization", `Bearer ${accessToken}`);
+
+    expect(response.status).toBe(200);
+    const stored = await prisma.tag.findUnique({ where: { id: tagId } });
+    expect(stored).toBeNull();
+  });
+
+  it("removes the tag's note associations when it was associated with notes", async () => {
+    const { accessToken, userId } = await registerAndGetToken(uniqueEmail());
+    const tagId = await createTagForUser(userId, "Work");
+    const note = await createNote(accessToken, "Note A");
+    await attachTagToNote(note.id, tagId);
+
+    await request(app).delete(`/api/tags/${tagId}`).set("Authorization", `Bearer ${accessToken}`);
+
+    const associations = await prisma.noteTag.findMany({ where: { tagId } });
+    expect(associations).toHaveLength(0);
+  });
+
+  it("leaves the tag's associated notes available after deletion", async () => {
+    const { accessToken, userId } = await registerAndGetToken(uniqueEmail());
+    const tagId = await createTagForUser(userId, "Work");
+    const note = await createNote(accessToken, "Note A");
+    await attachTagToNote(note.id, tagId);
+
+    await request(app).delete(`/api/tags/${tagId}`).set("Authorization", `Bearer ${accessToken}`);
 
     const response = await request(app)
       .get(`/api/notes/${note.id}`)
       .set("Authorization", `Bearer ${accessToken}`);
 
     expect(response.status).toBe(200);
-    const body = response.body as NoteResponse;
-    expect(body.tags).toEqual([{ id: tagId, name: "Work", color: "#ff0000" }]);
   });
 
-  it("rejects a user reading another user's note with 403 FORBIDDEN", async () => {
+  it("rejects an attempt to delete another user's tag", async () => {
     const owner = await registerAndGetToken(uniqueEmail());
-    const other = await registerAndGetToken(uniqueEmail());
-    const note = await createNote(owner.accessToken);
+    const attacker = await registerAndGetToken(uniqueEmail());
+    const tagId = await createTagForUser(owner.userId, "Work");
 
     const response = await request(app)
-      .get(`/api/notes/${note.id}`)
-      .set("Authorization", `Bearer ${other.accessToken}`);
+      .delete(`/api/tags/${tagId}`)
+      .set("Authorization", `Bearer ${attacker.accessToken}`);
 
     expect(response.status).toBe(403);
     expect((response.body as ErrorBody).code).toBe("FORBIDDEN");
   });
 
-  it("returns 404 NOT_FOUND for a soft-deleted note via the standard read operation", async () => {
+  it("returns 404 NOT_FOUND when deleting a nonexistent tag", async () => {
     const { accessToken } = await registerAndGetToken(uniqueEmail());
-    const note = await createNote(accessToken);
-
-    const deleteResponse = await request(app)
-      .delete(`/api/notes/${note.id}`)
-      .set("Authorization", `Bearer ${accessToken}`);
-    expect(deleteResponse.status).toBe(200);
 
     const response = await request(app)
-      .get(`/api/notes/${note.id}`)
+      .delete("/api/tags/00000000-0000-0000-0000-000000000000")
       .set("Authorization", `Bearer ${accessToken}`);
 
     expect(response.status).toBe(404);

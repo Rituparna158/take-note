@@ -78,6 +78,48 @@ describe("createNoteRequestSchema", () => {
       expect(result.data.title).toBe("My Note");
     }
   });
+
+  it("accepts an omitted tagIds field", () => {
+    const result = createNoteRequestSchema.safeParse({ title: "My Note", content: validDoc });
+
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.tagIds).toBeUndefined();
+    }
+  });
+
+  it("accepts a valid tagIds array", () => {
+    const result = createNoteRequestSchema.safeParse({
+      title: "My Note",
+      content: validDoc,
+      tagIds: ["550e8400-e29b-41d4-a716-446655440000"],
+    });
+
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.tagIds).toEqual(["550e8400-e29b-41d4-a716-446655440000"]);
+    }
+  });
+
+  it("accepts an empty tagIds array", () => {
+    const result = createNoteRequestSchema.safeParse({
+      title: "My Note",
+      content: validDoc,
+      tagIds: [],
+    });
+
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects a malformed (non-UUID) tagIds entry", () => {
+    const result = createNoteRequestSchema.safeParse({
+      title: "My Note",
+      content: validDoc,
+      tagIds: ["not-a-uuid"],
+    });
+
+    expect(result.success).toBe(false);
+  });
 });
 
 describe("updateNoteRequestSchema", () => {
@@ -92,10 +134,65 @@ describe("updateNoteRequestSchema", () => {
 
     expect(result.success).toBe(false);
   });
+
+  it("accepts an omitted tagIds field", () => {
+    const result = updateNoteRequestSchema.safeParse({ title: "Updated", content: validDoc });
+
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.tagIds).toBeUndefined();
+    }
+  });
+
+  it("accepts a valid tagIds array", () => {
+    const result = updateNoteRequestSchema.safeParse({
+      title: "Updated",
+      content: validDoc,
+      tagIds: ["550e8400-e29b-41d4-a716-446655440000"],
+    });
+
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts an empty tagIds array", () => {
+    const result = updateNoteRequestSchema.safeParse({
+      title: "Updated",
+      content: validDoc,
+      tagIds: [],
+    });
+
+    expect(result.success).toBe(true);
+  });
 });
 
 describe("noteResponseSchema", () => {
-  it("accepts a valid note response object", () => {
+  it("accepts a valid note response object with tags", () => {
+    const result = noteResponseSchema.safeParse({
+      id: "550e8400-e29b-41d4-a716-446655440000",
+      title: "My Note",
+      content: validDoc,
+      createdAt: "2026-07-16T12:00:00.000Z",
+      updatedAt: "2026-07-16T12:00:00.000Z",
+      tags: [{ id: "6ba7b810-9dad-11d1-80b4-00c04fd430c8", name: "Work", color: "#ff0000" }],
+    });
+
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts a valid note response object with no tags", () => {
+    const result = noteResponseSchema.safeParse({
+      id: "550e8400-e29b-41d4-a716-446655440000",
+      title: "My Note",
+      content: validDoc,
+      createdAt: "2026-07-16T12:00:00.000Z",
+      updatedAt: "2026-07-16T12:00:00.000Z",
+      tags: [],
+    });
+
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects a note response object missing tags", () => {
     const result = noteResponseSchema.safeParse({
       id: "550e8400-e29b-41d4-a716-446655440000",
       title: "My Note",
@@ -104,7 +201,7 @@ describe("noteResponseSchema", () => {
       updatedAt: "2026-07-16T12:00:00.000Z",
     });
 
-    expect(result.success).toBe(true);
+    expect(result.success).toBe(false);
   });
 });
 
@@ -127,6 +224,7 @@ describe("noteListResponseSchema", () => {
           content: validDoc,
           createdAt: "2026-07-16T12:00:00.000Z",
           updatedAt: "2026-07-16T12:00:00.000Z",
+          tags: [],
         },
       ],
       meta: { totalCount: 1, page: 1, limit: 1, totalPages: 1 },
