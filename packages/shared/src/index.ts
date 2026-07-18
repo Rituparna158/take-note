@@ -28,6 +28,7 @@ export {
   noteResponseSchema,
   noteListMetaSchema,
   noteListResponseSchema,
+  listNotesQuerySchema,
 } from "./notes/schemas.js";
 export type {
   TiptapMark,
@@ -38,4 +39,5 @@ export type {
   NoteResponse,
   NoteListMeta,
   NoteListResponse,
+  ListNotesQuery,
 } from "./notes/schemas.js";

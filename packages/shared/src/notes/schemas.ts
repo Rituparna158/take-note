@@ -57,3 +57,16 @@ export const noteListResponseSchema = z.object({
   meta: noteListMetaSchema,
 });
 export type NoteListResponse = z.infer<typeof noteListResponseSchema>;
+
+export const listNotesQuerySchema = z.object({
+  page: z.coerce.number().int().min(1).default(1),
+  limit: z.coerce.number().int().min(1).default(10),
+  sortBy: z.enum(["createdAt", "updatedAt"]).default("updatedAt"),
+  sortOrder: z.enum(["asc", "desc"]).default("desc"),
+  tags: z
+    .string()
+    .optional()
+    .transform((value) => (value && value.length > 0 ? value.split(",") : undefined))
+    .pipe(z.array(z.uuid()).optional()),
+});
+export type ListNotesQuery = z.infer<typeof listNotesQuerySchema>;
