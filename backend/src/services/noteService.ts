@@ -1,4 +1,4 @@
-import type { Note, Prisma } from "@prisma/client";
+import type { Note, NoteTag, Prisma, Tag } from "@prisma/client";
 import type {
   CreateNoteRequest,
   ListNotesQuery,
@@ -11,25 +11,42 @@ import type {
 import { extractPlainText } from "../lib/tiptapText.js";
 import { prisma } from "../lib/prisma.js";
 import { AppError } from "../middleware/errorHandler.js";
+import { assertTagsOwnedByUser } from "./tagService.js";
 
 type NoteLifecycleRequirement = "active" | "softDeleted";
 
-function toNoteResponse(note: Note): NoteResponse {
+type NoteWithTags = Note & { tags: (NoteTag & { tag: Tag })[] };
+
+const noteWithTagsInclude = { tags: { include: { tag: true } } } satisfies Prisma.NoteInclude;
+
+function toNoteResponse(note: NoteWithTags): NoteResponse {
   return {
     id: note.id,
     title: note.title,
     content: note.content as unknown as TiptapDocument,
     createdAt: note.createdAt.toISOString(),
     updatedAt: note.updatedAt.toISOString(),
+    tags: note.tags.map((noteTag) => ({
+      id: noteTag.tag.id,
+      name: noteTag.tag.name,
+      color: noteTag.tag.color,
+    })),
   };
+}
+
+function dedupeTagIds(tagIds: string[] | undefined): string[] {
+  return tagIds ? Array.from(new Set(tagIds)) : [];
 }
 
 async function findOwnedNoteOrThrow(
   userId: string,
   noteId: string,
   requirement: NoteLifecycleRequirement,
-): Promise<Note> {
-  const note = await prisma.note.findUnique({ where: { id: noteId } });
+): Promise<NoteWithTags> {
+  const note = await prisma.note.findUnique({
+    where: { id: noteId },
+    include: noteWithTagsInclude,
+  });
 
   if (!note) {
     throw new AppError(404, "NOT_FOUND", "Note not found");
@@ -52,6 +69,11 @@ async function findOwnedNoteOrThrow(
 
 export async function createNote(userId: string, input: CreateNoteRequest): Promise<NoteResponse> {
   const bodyText = extractPlainText(input.content);
+  const tagIds = dedupeTagIds(input.tagIds);
+
+  if (tagIds.length > 0) {
+    await assertTagsOwnedByUser(userId, tagIds);
+  }
 
   const note = await prisma.note.create({
     data: {
@@ -59,7 +81,9 @@ export async function createNote(userId: string, input: CreateNoteRequest): Prom
       content: input.content as unknown as Prisma.InputJsonValue,
       bodyText,
       userId,
+      tags: { create: tagIds.map((tagId) => ({ tagId })) },
     },
+    include: noteWithTagsInclude,
   });
 
   return toNoteResponse(note);
@@ -88,6 +112,7 @@ export async function listActiveNotes(
       orderBy: { [query.sortBy]: query.sortOrder },
       skip: (query.page - 1) * query.limit,
       take: query.limit,
+      include: noteWithTagsInclude,
     }),
     prisma.note.count({ where }),
   ]);
@@ -110,6 +135,18 @@ export async function updateNote(
 
   const bodyText = extractPlainText(input.content);
 
+  if (input.tagIds) {
+    const tagIds = dedupeTagIds(input.tagIds);
+    if (tagIds.length > 0) {
+      await assertTagsOwnedByUser(userId, tagIds);
+    }
+
+    await prisma.$transaction([
+      prisma.noteTag.deleteMany({ where: { noteId } }),
+      prisma.noteTag.createMany({ data: tagIds.map((tagId) => ({ noteId, tagId })) }),
+    ]);
+  }
+
   const updated = await prisma.note.update({
     where: { id: noteId },
     data: {
@@ -117,6 +154,7 @@ export async function updateNote(
       content: input.content as unknown as Prisma.InputJsonValue,
       bodyText,
     },
+    include: noteWithTagsInclude,
   });
 
   return toNoteResponse(updated);
