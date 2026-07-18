@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   createNoteRequestSchema,
+  listNotesQuerySchema,
   noteListResponseSchema,
   noteResponseSchema,
   tiptapDocumentSchema,
@@ -132,5 +133,92 @@ describe("noteListResponseSchema", () => {
     });
 
     expect(result.success).toBe(true);
+  });
+});
+
+describe("listNotesQuerySchema", () => {
+  it("applies defaults when params are omitted", () => {
+    const result = listNotesQuerySchema.safeParse({});
+
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data).toEqual({ page: 1, limit: 10, sortBy: "updatedAt", sortOrder: "desc" });
+    }
+  });
+
+  it("accepts valid page, limit, sortBy, sortOrder, and tags", () => {
+    const result = listNotesQuerySchema.safeParse({
+      page: "2",
+      limit: "20",
+      sortBy: "createdAt",
+      sortOrder: "asc",
+      tags: "550e8400-e29b-41d4-a716-446655440000,6ba7b810-9dad-11d1-80b4-00c04fd430c8",
+    });
+
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.page).toBe(2);
+      expect(result.data.limit).toBe(20);
+      expect(result.data.sortBy).toBe("createdAt");
+      expect(result.data.sortOrder).toBe("asc");
+      expect(result.data.tags).toEqual([
+        "550e8400-e29b-41d4-a716-446655440000",
+        "6ba7b810-9dad-11d1-80b4-00c04fd430c8",
+      ]);
+    }
+  });
+
+  it("accepts a large limit with no upper bound", () => {
+    const result = listNotesQuerySchema.safeParse({ limit: "10000" });
+
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.limit).toBe(10000);
+    }
+  });
+
+  it("rejects a non-numeric page", () => {
+    const result = listNotesQuerySchema.safeParse({ page: "abc" });
+
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects a zero page", () => {
+    const result = listNotesQuerySchema.safeParse({ page: "0" });
+
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects a negative limit", () => {
+    const result = listNotesQuerySchema.safeParse({ limit: "-1" });
+
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects an unsupported sortBy value", () => {
+    const result = listNotesQuerySchema.safeParse({ sortBy: "title" });
+
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects an unsupported sortOrder value", () => {
+    const result = listNotesQuerySchema.safeParse({ sortOrder: "sideways" });
+
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects a malformed (non-UUID) tag ID", () => {
+    const result = listNotesQuerySchema.safeParse({ tags: "not-a-uuid" });
+
+    expect(result.success).toBe(false);
+  });
+
+  it("treats an empty tags string as no filter", () => {
+    const result = listNotesQuerySchema.safeParse({ tags: "" });
+
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.tags).toBeUndefined();
+    }
   });
 });
