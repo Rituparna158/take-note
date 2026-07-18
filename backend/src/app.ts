@@ -7,6 +7,7 @@ import { pinoHttp } from "pino-http";
 
 import { errorHandler, notFoundHandler } from "./middleware/errorHandler.js";
 import { authRouter } from "./routes/auth.js";
+import { notesRouter } from "./routes/notes.js";
 
 export function createApp(): Express {
   const app = express();
@@ -53,11 +54,16 @@ export function createApp(): Express {
       limit: 1000,
       standardHeaders: true,
       legacyHeaders: false,
+      message: {
+        code: "RATE_LIMIT_EXCEEDED",
+        message: "Too many requests. Please try again later.",
+      },
     }),
   );
 
   // 7. API routes (authenticateToken is applied per-route inside each router, not globally)
   app.use("/api/auth", authRouter);
+  app.use("/api/notes", notesRouter);
 
   app.get("/api/health", (_req, res) => {
     res.status(200).json({ status: "ok" });
