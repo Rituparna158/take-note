@@ -56,3 +56,10 @@ export type {
   TagWithCountResponse,
   TagListResponse,
 } from "./tags/schemas.js";
+
+export {
+  searchQuerySchema,
+  noteSearchResultSchema,
+  searchResponseSchema,
+} from "./search/schemas.js";
+export type { SearchQuery, NoteSearchResult, SearchResponse } from "./search/schemas.js";
