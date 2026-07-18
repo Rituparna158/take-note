@@ -1,11 +1,12 @@
 ---
-
 name: "Plan"
 description: "Create and get approval for a ticket's technical implementation plan after its proposal is approved"
 allowed-tools: Bash(openspec:*)
 category: Workflow
 tags: [workflow, spec-driven, planning]
----------------------------------------
+---
+
+---
 
 Create the technical implementation plan for a ticket. This is **Stage 2** of the project's Spec-Driven Development lifecycle:
 
@@ -19,7 +20,7 @@ The argument after `/plan` should be the Azure Boards ticket ID or the OpenSpec 
 
 ## Steps
 
-### 1. Confirm the proposal is approved
+### 1. Confirm the proposal and delta spec(s) are approved
 
 Run:
 
@@ -29,14 +30,14 @@ openspec status --change "<change-name>" --json
 
 Confirm that:
 
-* the proposal artifact exists,
-* its status is `done`.
+- the `proposal` artifact exists and its status is `done`,
+- the `specs` artifact exists and its status is `done` (a delta spec file exists for every capability listed in the proposal).
 
-If no approved proposal exists:
+If no approved proposal exists, or the proposal exists but its delta spec(s) are missing or unapproved:
 
-* stop immediately,
-* instruct the user to complete `/spec` first,
-* do not continue with planning.
+- stop immediately,
+- instruct the user to complete (or finish approving) `/spec` first,
+- do not continue with planning.
 
 ---
 
@@ -75,25 +76,25 @@ Use the returned template to create the OpenSpec design artifact.
 
 The plan should include:
 
-* implementation approach,
-* files and modules to create or modify,
-* API endpoints involved,
-* service boundaries,
-* data flow,
-* shared DTO usage,
-* Prisma schema changes (if any),
-* database migrations (if required),
-* testing strategy,
-* architecture decisions,
-* quality checkpoints.
+- implementation approach,
+- files and modules to create or modify,
+- API endpoints involved,
+- service boundaries,
+- data flow,
+- shared DTO usage,
+- Prisma schema changes (if any),
+- database migrations (if required),
+- testing strategy,
+- architecture decisions,
+- quality checkpoints.
 
 Reference:
 
-* relevant FRS requirements,
-* SDS architecture,
-* API contracts,
-* database schema,
-* coding standards from `AGENTS.md`.
+- relevant FRS requirements,
+- SDS architecture,
+- API contracts,
+- database schema,
+- coding standards from `AGENTS.md`.
 
 Apply any `context` and `rules` returned by OpenSpec as constraints.
 
@@ -101,9 +102,9 @@ Do **not** copy them into the document.
 
 Do **not** create:
 
-* task breakdown,
-* implementation code,
-* automated tests.
+- task breakdown,
+- implementation code,
+- automated tests.
 
 If the ticket requires deviating from an architecture defined in `docs/SDS.md` or `AGENTS.md`, stop and ask the user instead of making assumptions.
 
@@ -119,10 +120,10 @@ openspec status --change "<change-name>" --json
 
 Confirm that:
 
-* proposal remains `done`,
-* design is `done`,
-* no task artifact has been created,
-* no implementation artifacts exist.
+- proposal remains `done`,
+- design is `done`,
+- no task artifact has been created,
+- no implementation artifacts exist.
 
 ---
 
@@ -130,12 +131,12 @@ Confirm that:
 
 Summarize:
 
-* Ticket ID
-* OpenSpec change name
-* Key implementation decisions
-* FRS sections referenced
-* SDS sections referenced
-* Design artifact location
+- Ticket ID
+- OpenSpec change name
+- Key implementation decisions
+- FRS sections referenced
+- SDS sections referenced
+- Design artifact location
 
 Finish with exactly:
 
@@ -145,11 +146,11 @@ Finish with exactly:
 
 ## Guardrails
 
-* Never create tasks.
-* Never generate implementation code.
-* Never generate tests.
-* Never continue if the proposal has not been approved.
-* Never change the approved scope during planning.
-* Never invent architecture beyond what is defined in `docs/SDS.md` and `AGENTS.md`.
-* Stop immediately after the implementation plan has been created and summarized.
-* Wait for explicit user approval before continuing to `/tasks`.
+- Never create tasks.
+- Never generate implementation code.
+- Never generate tests.
+- Never continue if the proposal has not been approved.
+- Never change the approved scope during planning.
+- Never invent architecture beyond what is defined in `docs/SDS.md` and `AGENTS.md`.
+- Stop immediately after the implementation plan has been created and summarized.
+- Wait for explicit user approval before continuing to `/tasks`.
