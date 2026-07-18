@@ -1,4 +1,8 @@
-import { createNoteRequestSchema, updateNoteRequestSchema } from "@take-note/shared";
+import {
+  createNoteRequestSchema,
+  listNotesQuerySchema,
+  updateNoteRequestSchema,
+} from "@take-note/shared";
 import { Router, type Request, type Response } from "express";
 
 import { authenticateToken } from "../middleware/authenticateToken.js";
@@ -54,7 +58,17 @@ notesRouter.post("/", async (req: Request, res: Response) => {
 notesRouter.get("/", async (req: Request, res: Response) => {
   const userId = requireUserId(req);
 
-  const result = await listActiveNotes(userId);
+  const parsed = listNotesQuerySchema.safeParse(req.query);
+  if (!parsed.success) {
+    throw new AppError(
+      400,
+      "VALIDATION_ERROR",
+      "Invalid query parameters",
+      zodIssuesToFields(parsed.error.issues),
+    );
+  }
+
+  const result = await listActiveNotes(userId, parsed.data);
   res.status(200).json(result);
 });
 

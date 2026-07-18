@@ -1,6 +1,7 @@
 import type { Note, Prisma } from "@prisma/client";
 import type {
   CreateNoteRequest,
+  ListNotesQuery,
   NoteListResponse,
   NoteResponse,
   TiptapDocument,
@@ -69,18 +70,34 @@ export async function getActiveNoteById(userId: string, noteId: string): Promise
   return toNoteResponse(note);
 }
 
-export async function listActiveNotes(userId: string): Promise<NoteListResponse> {
-  const notes = await prisma.note.findMany({
-    where: { userId, deletedAt: null },
-    orderBy: { updatedAt: "desc" },
-  });
+export async function listActiveNotes(
+  userId: string,
+  query: ListNotesQuery,
+): Promise<NoteListResponse> {
+  const where: Prisma.NoteWhereInput = {
+    userId,
+    deletedAt: null,
+    ...(query.tags && query.tags.length > 0
+      ? { AND: query.tags.map((tagId) => ({ tags: { some: { tagId } } })) }
+      : {}),
+  };
+
+  const [notes, totalCount] = await Promise.all([
+    prisma.note.findMany({
+      where,
+      orderBy: { [query.sortBy]: query.sortOrder },
+      skip: (query.page - 1) * query.limit,
+      take: query.limit,
+    }),
+    prisma.note.count({ where }),
+  ]);
 
   const data = notes.map(toNoteResponse);
-  const totalCount = data.length;
+  const totalPages = totalCount === 0 ? 0 : Math.ceil(totalCount / query.limit);
 
   return {
     data,
-    meta: { totalCount, page: 1, limit: totalCount, totalPages: 1 },
+    meta: { totalCount, page: query.page, limit: query.limit, totalPages },
   };
 }
 
