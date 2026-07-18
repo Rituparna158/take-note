@@ -8,6 +8,7 @@ import { pinoHttp } from "pino-http";
 import { errorHandler, notFoundHandler } from "./middleware/errorHandler.js";
 import { authRouter } from "./routes/auth.js";
 import { notesRouter } from "./routes/notes.js";
+import { searchRouter } from "./routes/search.js";
 import { tagsRouter } from "./routes/tags.js";
 
 export function createApp(): Express {
@@ -66,6 +67,7 @@ export function createApp(): Express {
   app.use("/api/auth", authRouter);
   app.use("/api/notes", notesRouter);
   app.use("/api/tags", tagsRouter);
+  app.use("/api/search", searchRouter);
 
   app.get("/api/health", (_req, res) => {
     res.status(200).json({ status: "ok" });

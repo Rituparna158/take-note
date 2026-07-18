@@ -42,6 +42,7 @@ model Note {
   tags       NoteTag[]
   versions   NoteVersion[]
   shareLinks ShareLink[]
+  searchVector Unsupported("tsvector")? // Generated column (title + bodyText) managed via raw-SQL migration; GIN-indexed for full-text search
 
   @@index([userId])
   @@index([deletedAt])
