@@ -18,3 +18,24 @@ export type {
   ResetPasswordRequest,
   MessageResponse,
 } from "./auth/schemas.js";
+
+export {
+  tiptapMarkSchema,
+  tiptapNodeSchema,
+  tiptapDocumentSchema,
+  createNoteRequestSchema,
+  updateNoteRequestSchema,
+  noteResponseSchema,
+  noteListMetaSchema,
+  noteListResponseSchema,
+} from "./notes/schemas.js";
+export type {
+  TiptapMark,
+  TiptapNode,
+  TiptapDocument,
+  CreateNoteRequest,
+  UpdateNoteRequest,
+  NoteResponse,
+  NoteListMeta,
+  NoteListResponse,
+} from "./notes/schemas.js";
