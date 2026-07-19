@@ -63,3 +63,14 @@ export {
   searchResponseSchema,
 } from "./search/schemas.js";
 export type { SearchQuery, NoteSearchResult, SearchResponse } from "./search/schemas.js";
+
+export {
+  generateShareLinkRequestSchema,
+  shareLinkResponseSchema,
+  publicShareResponseSchema,
+} from "./share/schemas.js";
+export type {
+  GenerateShareLinkRequest,
+  ShareLinkResponse,
+  PublicShareResponse,
+} from "./share/schemas.js";

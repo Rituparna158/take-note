@@ -38,7 +38,7 @@ function dedupeTagIds(tagIds: string[] | undefined): string[] {
   return tagIds ? Array.from(new Set(tagIds)) : [];
 }
 
-async function findOwnedNoteOrThrow(
+export async function findOwnedNoteOrThrow(
   userId: string,
   noteId: string,
   requirement: NoteLifecycleRequirement,
