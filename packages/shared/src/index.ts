@@ -29,6 +29,9 @@ export {
   noteListMetaSchema,
   noteListResponseSchema,
   listNotesQuerySchema,
+  noteVersionListItemSchema,
+  noteVersionDetailSchema,
+  restoreVersionResponseSchema,
 } from "./notes/schemas.js";
 export type {
   TiptapMark,
@@ -40,6 +43,9 @@ export type {
   NoteListMeta,
   NoteListResponse,
   ListNotesQuery,
+  NoteVersionListItem,
+  NoteVersionDetail,
+  RestoreVersionResponse,
 } from "./notes/schemas.js";
 
 export {
