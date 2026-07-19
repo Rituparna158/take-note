@@ -5,6 +5,9 @@ import {
   listNotesQuerySchema,
   noteListResponseSchema,
   noteResponseSchema,
+  noteVersionDetailSchema,
+  noteVersionListItemSchema,
+  restoreVersionResponseSchema,
   tiptapDocumentSchema,
   updateNoteRequestSchema,
 } from "./schemas.js";
@@ -318,5 +321,88 @@ describe("listNotesQuerySchema", () => {
     if (result.success) {
       expect(result.data.tags).toBeUndefined();
     }
+  });
+});
+
+describe("noteVersionListItemSchema", () => {
+  it("accepts a valid version list item", () => {
+    const result = noteVersionListItemSchema.safeParse({
+      id: "550e8400-e29b-41d4-a716-446655440000",
+      version: 1,
+      title: "My Note",
+      savedAt: "2026-07-16T12:00:00.000Z",
+    });
+
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects a non-positive version number", () => {
+    const result = noteVersionListItemSchema.safeParse({
+      id: "550e8400-e29b-41d4-a716-446655440000",
+      version: 0,
+      title: "My Note",
+      savedAt: "2026-07-16T12:00:00.000Z",
+    });
+
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects a missing savedAt", () => {
+    const result = noteVersionListItemSchema.safeParse({
+      id: "550e8400-e29b-41d4-a716-446655440000",
+      version: 1,
+      title: "My Note",
+    });
+
+    expect(result.success).toBe(false);
+  });
+});
+
+describe("noteVersionDetailSchema", () => {
+  it("accepts a valid version detail with TipTap content", () => {
+    const result = noteVersionDetailSchema.safeParse({
+      id: "550e8400-e29b-41d4-a716-446655440000",
+      version: 2,
+      title: "My Note",
+      content: validDoc,
+      savedAt: "2026-07-16T12:00:00.000Z",
+    });
+
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects a malformed content document", () => {
+    const result = noteVersionDetailSchema.safeParse({
+      id: "550e8400-e29b-41d4-a716-446655440000",
+      version: 2,
+      title: "My Note",
+      content: { type: "paragraph", content: [] },
+      savedAt: "2026-07-16T12:00:00.000Z",
+    });
+
+    expect(result.success).toBe(false);
+  });
+});
+
+describe("restoreVersionResponseSchema", () => {
+  it("accepts a valid restore response", () => {
+    const result = restoreVersionResponseSchema.safeParse({
+      id: "550e8400-e29b-41d4-a716-446655440000",
+      title: "My Note",
+      content: validDoc,
+      version: 3,
+    });
+
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects a missing version number", () => {
+    const result = restoreVersionResponseSchema.safeParse({
+      id: "550e8400-e29b-41d4-a716-446655440000",
+      title: "My Note",
+      content: validDoc,
+    });
+
+    expect(result.success).toBe(false);
   });
 });

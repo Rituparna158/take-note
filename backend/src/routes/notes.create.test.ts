@@ -121,4 +121,22 @@ describe("POST /api/notes", () => {
     expect(response.status).toBe(422);
     expect((response.body as ErrorBody).code).toBe("CONFLICT");
   });
+
+  it("saves an initial version snapshot recording the created title and content", async () => {
+    const { accessToken } = await registerAndGetToken(uniqueEmail());
+
+    const response = await request(app)
+      .post("/api/notes")
+      .set("Authorization", `Bearer ${accessToken}`)
+      .send(validNotePayload);
+
+    const created = response.body as NoteResponse;
+
+    const versions = await prisma.noteVersion.findMany({ where: { noteId: created.id } });
+
+    expect(versions).toHaveLength(1);
+    expect(versions[0]?.version).toBe(1);
+    expect(versions[0]?.title).toBe(validNotePayload.title);
+    expect(versions[0]?.content).toEqual(validNotePayload.content);
+  });
 });

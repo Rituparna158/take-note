@@ -11,6 +11,7 @@ import { notesRouter } from "./routes/notes.js";
 import { noteShareRouter, publicShareRouter } from "./routes/share.js";
 import { searchRouter } from "./routes/search.js";
 import { tagsRouter } from "./routes/tags.js";
+import { noteVersionsRouter } from "./routes/versions.js";
 
 export function createApp(): Express {
   const app = express();
@@ -66,8 +67,9 @@ export function createApp(): Express {
 
   // 7. API routes (authenticateToken is applied per-route inside each router, not globally)
   app.use("/api/auth", authRouter);
-  // Mounted before "/api/notes" so this more specific path is matched first.
+  // Mounted before "/api/notes" so these more specific paths are matched first.
   app.use("/api/notes/:id/share", noteShareRouter);
+  app.use("/api/notes/:id/versions", noteVersionsRouter);
   app.use("/api/notes", notesRouter);
   app.use("/api/tags", tagsRouter);
   app.use("/api/search", searchRouter);
