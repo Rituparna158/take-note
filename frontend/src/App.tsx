@@ -1,7 +1,18 @@
+import { useEffect, useRef } from "react";
+
+import { refresh } from "./features/auth/authApi.js";
+import { AppRouter } from "./routes/AppRouter.js";
+
 export function App() {
-  return (
-    <main className="flex min-h-screen items-center justify-center bg-slate-50">
-      <h1 className="text-2xl font-semibold text-slate-900">Take Note</h1>
-    </main>
-  );
+  const hasBootstrapped = useRef(false);
+
+  useEffect(() => {
+    if (hasBootstrapped.current) {
+      return;
+    }
+    hasBootstrapped.current = true;
+    void refresh();
+  }, []);
+
+  return <AppRouter />;
 }

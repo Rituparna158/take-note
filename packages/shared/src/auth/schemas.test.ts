@@ -6,6 +6,7 @@ import {
   forgotPasswordRequestSchema,
   loginRequestSchema,
   messageResponseSchema,
+  refreshResponseSchema,
   registerRequestSchema,
   resetPasswordRequestSchema,
 } from "./schemas.js";
@@ -69,6 +70,20 @@ describe("authResponseSchema", () => {
     });
 
     expect(result.success).toBe(true);
+  });
+});
+
+describe("refreshResponseSchema", () => {
+  it("accepts a valid accessToken", () => {
+    const result = refreshResponseSchema.safeParse({ accessToken: "some-jwt-token" });
+
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects a missing accessToken", () => {
+    const result = refreshResponseSchema.safeParse({});
+
+    expect(result.success).toBe(false);
   });
 });
 
