@@ -24,6 +24,11 @@ export const authResponseSchema = z.object({
 });
 export type AuthResponse = z.infer<typeof authResponseSchema>;
 
+export const refreshResponseSchema = z.object({
+  accessToken: z.string(),
+});
+export type RefreshResponse = z.infer<typeof refreshResponseSchema>;
+
 export const forgotPasswordRequestSchema = z.object({
   email: z.email().trim(),
 });
