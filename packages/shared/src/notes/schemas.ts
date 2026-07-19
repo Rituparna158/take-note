@@ -75,3 +75,28 @@ export const listNotesQuerySchema = z.object({
     .pipe(z.array(z.uuid()).optional()),
 });
 export type ListNotesQuery = z.infer<typeof listNotesQuerySchema>;
+
+export const noteVersionListItemSchema = z.object({
+  id: z.uuid(),
+  version: z.number().int().positive(),
+  title: z.string(),
+  savedAt: z.iso.datetime(),
+});
+export type NoteVersionListItem = z.infer<typeof noteVersionListItemSchema>;
+
+export const noteVersionDetailSchema = z.object({
+  id: z.uuid(),
+  version: z.number().int().positive(),
+  title: z.string(),
+  content: tiptapDocumentSchema,
+  savedAt: z.iso.datetime(),
+});
+export type NoteVersionDetail = z.infer<typeof noteVersionDetailSchema>;
+
+export const restoreVersionResponseSchema = z.object({
+  id: z.uuid(),
+  title: z.string(),
+  content: tiptapDocumentSchema,
+  version: z.number().int().positive(),
+});
+export type RestoreVersionResponse = z.infer<typeof restoreVersionResponseSchema>;

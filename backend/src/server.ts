@@ -2,6 +2,7 @@ import cron from "node-cron";
 
 import { createApp } from "./app.js";
 import { purgeExpiredNotes } from "./jobs/purgeNotes.js";
+import { purgeExpiredVersions } from "./jobs/purgeVersions.js";
 import { logger } from "./lib/logger.js";
 
 const port = Number(process.env.PORT ?? 3000);
@@ -17,6 +18,12 @@ if (!purgeCronSchedule || !cron.validate(purgeCronSchedule)) {
 cron.schedule(purgeCronSchedule, () => {
   purgeExpiredNotes().catch((error: unknown) => {
     logger.error({ error }, "Failed to purge expired notes");
+  });
+});
+
+cron.schedule(purgeCronSchedule, () => {
+  purgeExpiredVersions().catch((error: unknown) => {
+    logger.error({ error }, "Failed to purge expired note versions");
   });
 });
 

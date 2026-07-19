@@ -173,4 +173,43 @@ describe("PUT /api/notes/:id", () => {
     expect(response.status).toBe(422);
     expect((response.body as ErrorBody).code).toBe("CONFLICT");
   });
+
+  it("saves a new incremented version snapshot when title or content changes", async () => {
+    const { accessToken } = await registerAndGetToken(uniqueEmail());
+    const note = await createNote(accessToken);
+
+    const response = await request(app)
+      .put(`/api/notes/${note.id}`)
+      .set("Authorization", `Bearer ${accessToken}`)
+      .send(updatedNotePayload);
+
+    expect(response.status).toBe(200);
+
+    const versions = await prisma.noteVersion.findMany({
+      where: { noteId: note.id },
+      orderBy: { version: "asc" },
+    });
+
+    expect(versions).toHaveLength(2);
+    expect(versions[1]?.version).toBe(2);
+    expect(versions[1]?.title).toBe(updatedNotePayload.title);
+    expect(versions[1]?.content).toEqual(updatedNotePayload.content);
+  });
+
+  it("does not save a new version snapshot when only tagIds change", async () => {
+    const { accessToken, userId } = await registerAndGetToken(uniqueEmail());
+    const note = await createNote(accessToken);
+    const tagId = await createTagForUser(userId, "Tag Only");
+
+    const response = await request(app)
+      .put(`/api/notes/${note.id}`)
+      .set("Authorization", `Bearer ${accessToken}`)
+      .send({ ...validNotePayload, tagIds: [tagId] });
+
+    expect(response.status).toBe(200);
+
+    const versions = await prisma.noteVersion.findMany({ where: { noteId: note.id } });
+
+    expect(versions).toHaveLength(1);
+  });
 });

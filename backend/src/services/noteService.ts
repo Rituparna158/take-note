@@ -12,6 +12,7 @@ import { extractPlainText } from "../lib/tiptapText.js";
 import { prisma } from "../lib/prisma.js";
 import { AppError } from "../middleware/errorHandler.js";
 import { assertTagsOwnedByUser } from "./tagService.js";
+import { hasVersionableChange, saveVersionSnapshot } from "./versionService.js";
 
 type NoteLifecycleRequirement = "active" | "softDeleted";
 
@@ -82,6 +83,14 @@ export async function createNote(userId: string, input: CreateNoteRequest): Prom
       bodyText,
       userId,
       tags: { create: tagIds.map((tagId) => ({ tagId })) },
+      versions: {
+        create: {
+          title: input.title,
+          content: input.content as unknown as Prisma.InputJsonValue,
+          bodyText,
+          version: 1,
+        },
+      },
     },
     include: noteWithTagsInclude,
   });
@@ -131,30 +140,47 @@ export async function updateNote(
   noteId: string,
   input: UpdateNoteRequest,
 ): Promise<NoteResponse> {
-  await findOwnedNoteOrThrow(userId, noteId, "active");
+  const existing = await findOwnedNoteOrThrow(userId, noteId, "active");
 
   const bodyText = extractPlainText(input.content);
+  const tagIds = input.tagIds !== undefined ? dedupeTagIds(input.tagIds) : undefined;
 
-  if (input.tagIds) {
-    const tagIds = dedupeTagIds(input.tagIds);
-    if (tagIds.length > 0) {
-      await assertTagsOwnedByUser(userId, tagIds);
-    }
-
-    await prisma.$transaction([
-      prisma.noteTag.deleteMany({ where: { noteId } }),
-      prisma.noteTag.createMany({ data: tagIds.map((tagId) => ({ noteId, tagId })) }),
-    ]);
+  if (tagIds && tagIds.length > 0) {
+    await assertTagsOwnedByUser(userId, tagIds);
   }
 
-  const updated = await prisma.note.update({
-    where: { id: noteId },
-    data: {
-      title: input.title,
-      content: input.content as unknown as Prisma.InputJsonValue,
-      bodyText,
-    },
-    include: noteWithTagsInclude,
+  const shouldSaveVersion = hasVersionableChange(
+    { title: existing.title, content: existing.content },
+    { title: input.title, content: input.content },
+  );
+
+  const updated = await prisma.$transaction(async (tx) => {
+    if (tagIds) {
+      await tx.noteTag.deleteMany({ where: { noteId } });
+      await tx.noteTag.createMany({ data: tagIds.map((tagId) => ({ noteId, tagId })) });
+    }
+
+    const updatedNote = await tx.note.update({
+      where: { id: noteId },
+      data: {
+        title: input.title,
+        content: input.content as unknown as Prisma.InputJsonValue,
+        bodyText,
+      },
+      include: noteWithTagsInclude,
+    });
+
+    if (shouldSaveVersion) {
+      await saveVersionSnapshot(
+        tx,
+        noteId,
+        input.title,
+        input.content as unknown as Prisma.InputJsonValue,
+        bodyText,
+      );
+    }
+
+    return updatedNote;
   });
 
   return toNoteResponse(updated);
