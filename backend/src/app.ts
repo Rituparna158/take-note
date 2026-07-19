@@ -8,6 +8,7 @@ import { pinoHttp } from "pino-http";
 import { errorHandler, notFoundHandler } from "./middleware/errorHandler.js";
 import { authRouter } from "./routes/auth.js";
 import { notesRouter } from "./routes/notes.js";
+import { noteShareRouter, publicShareRouter } from "./routes/share.js";
 import { searchRouter } from "./routes/search.js";
 import { tagsRouter } from "./routes/tags.js";
 
@@ -65,9 +66,12 @@ export function createApp(): Express {
 
   // 7. API routes (authenticateToken is applied per-route inside each router, not globally)
   app.use("/api/auth", authRouter);
+  // Mounted before "/api/notes" so this more specific path is matched first.
+  app.use("/api/notes/:id/share", noteShareRouter);
   app.use("/api/notes", notesRouter);
   app.use("/api/tags", tagsRouter);
   app.use("/api/search", searchRouter);
+  app.use("/api/share", publicShareRouter);
 
   app.get("/api/health", (_req, res) => {
     res.status(200).json({ status: "ok" });
