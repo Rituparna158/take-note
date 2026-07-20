@@ -23,6 +23,8 @@ function renderPage() {
         <Routes>
           <Route path="/" element={<NotesListPage />} />
           <Route path="/login" element={<div>Login page</div>} />
+          <Route path="/notes/new" element={<div>New note editor page</div>} />
+          <Route path="/notes/:id" element={<div>Note editor page</div>} />
         </Routes>
       </MemoryRouter>
     </QueryClientProvider>,
@@ -241,6 +243,43 @@ describe("NotesListPage", () => {
     });
     expect(useAuthStore.getState().status).toBe("unauthenticated");
     expect(useAuthStore.getState().accessToken).toBeNull();
+  });
+
+  it("New Note action opens the editor for a new note", async () => {
+    useAuthStore.setState({
+      accessToken: "test-access-token",
+      user: AUTHENTICATED_USER,
+      status: "authenticated",
+    });
+    const user = userEvent.setup();
+
+    renderPage();
+
+    await user.click(await screen.findByRole("button", { name: "New Note" }));
+
+    await waitFor(() => {
+      expect(screen.getByText("New note editor page")).toBeVisible();
+    });
+  });
+
+  it("Selecting a note in the list opens it in the editor", async () => {
+    useAuthStore.setState({
+      accessToken: "test-access-token",
+      user: AUTHENTICATED_USER,
+      status: "authenticated",
+    });
+    const user = userEvent.setup();
+
+    renderPage();
+
+    const heading = await screen.findByRole("heading", { name: "Note 1", level: 2 });
+    const link = heading.closest("a");
+    expect(link).not.toBeNull();
+    await user.click(link as HTMLElement);
+
+    await waitFor(() => {
+      expect(screen.getByText("Note editor page")).toBeVisible();
+    });
   });
 
   it("Failed fetch displays error feedback with retry control", async () => {

@@ -25,6 +25,13 @@ export function NotesListHeader(): ReactElement {
         <span className="text-sm text-slate-600">{user?.email}</span>
         <button
           type="button"
+          onClick={() => navigate("/notes/new")}
+          className="rounded bg-slate-900 px-3 py-1.5 text-sm text-white"
+        >
+          New Note
+        </button>
+        <button
+          type="button"
           onClick={() => void handleLogout()}
           disabled={isLoggingOut}
           className="rounded bg-slate-900 px-3 py-1.5 text-sm text-white disabled:opacity-50"
