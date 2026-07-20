@@ -20,13 +20,23 @@ type UseAutosaveOptions = {
   onSave: (value: AutosaveValue) => Promise<unknown>;
 };
 
+export type UseAutosaveResult = {
+  /** Marks a value as already persisted through some means other than this hook's own onSave (e.g. a version restore), so the next debounce tick doesn't see it as unsaved drift and fire a redundant save. */
+  markSaved: (value: AutosaveValue) => void;
+};
+
 function wait(ms: number): Promise<void> {
   return new Promise((resolve) => {
     setTimeout(resolve, ms);
   });
 }
 
-export function useAutosave({ enabled, value, initialSnapshot, onSave }: UseAutosaveOptions): void {
+export function useAutosave({
+  enabled,
+  value,
+  initialSnapshot,
+  onSave,
+}: UseAutosaveOptions): UseAutosaveResult {
   const setSaving = useEditorStore((state) => state.setSaving);
   const setSaved = useEditorStore((state) => state.setSaved);
   const setRetrying = useEditorStore((state) => state.setRetrying);
@@ -93,4 +103,10 @@ export function useAutosave({ enabled, value, initialSnapshot, onSave }: UseAuto
       clearTimeout(timeoutId);
     };
   }, [enabled, snapshot, initialSnapshotString, setSaving, setSaved, setRetrying, setError]);
+
+  function markSaved(nextValue: AutosaveValue): void {
+    lastSavedSnapshotRef.current = JSON.stringify(nextValue);
+  }
+
+  return { markSaved };
 }

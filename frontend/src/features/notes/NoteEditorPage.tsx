@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type ReactElement } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { EditorContent, useEditor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
-import type { TiptapDocument } from "@take-note/shared";
+import type { RestoreVersionResponse, TiptapDocument } from "@take-note/shared";
 
 import { useTagsQuery } from "../tags/useTagsQuery.js";
 import { useEditorStore } from "../../stores/editorStore.js";
@@ -14,6 +14,7 @@ import { useAutosave, type AutosaveValue } from "./useAutosave.js";
 import { useCreateNoteMutation } from "./useCreateNoteMutation.js";
 import { useNoteQuery } from "./useNoteQuery.js";
 import { useUpdateNoteMutation } from "./useUpdateNoteMutation.js";
+import { VersionHistoryDrawer } from "./VersionHistoryDrawer.js";
 
 export function NoteEditorPage(): ReactElement {
   const { id: routeId } = useParams<{ id?: string }>();
@@ -29,6 +30,7 @@ export function NoteEditorPage(): ReactElement {
   const [createdLocally, setCreatedLocally] = useState(false);
   const [persistedSnapshot, setPersistedSnapshot] = useState<AutosaveValue | null>(null);
   const [shareModalOpen, setShareModalOpen] = useState(false);
+  const [historyDrawerOpen, setHistoryDrawerOpen] = useState(false);
   const hasFiredCreateRef = useRef(false);
 
   const editor = useEditor({
@@ -63,6 +65,15 @@ export function NoteEditorPage(): ReactElement {
     );
   }
 
+  function handleRestored(result: RestoreVersionResponse): void {
+    const restoredSnapshot = { title: result.title, content: result.content, tagIds };
+    setTitle(result.title);
+    setContent(result.content);
+    editor?.commands.setContent(result.content, { emitUpdate: false });
+    setPersistedSnapshot(restoredSnapshot);
+    markSaved(restoredSnapshot);
+  }
+
   if (!isNew && !createdLocally && noteQuery.data && noteQuery.data.id !== appliedNoteId) {
     const loadedTagIds = noteQuery.data.tags.map((tag) => tag.id);
     setAppliedNoteId(noteQuery.data.id);
@@ -89,7 +100,7 @@ export function NoteEditorPage(): ReactElement {
     editor.commands.setContent(noteQuery.data.content, { emitUpdate: false });
   }, [isNew, editor, noteQuery.data, appliedNoteId, createdLocally]);
 
-  useAutosave({
+  const { markSaved } = useAutosave({
     enabled: createdLocally || (noteId !== null && appliedNoteId === noteId),
     value: { title, content, tagIds },
     initialSnapshot: persistedSnapshot ?? { title, content, tagIds },
@@ -227,6 +238,15 @@ export function NoteEditorPage(): ReactElement {
               Share
             </button>
           )}
+          {noteId !== null && (
+            <button
+              type="button"
+              onClick={() => setHistoryDrawerOpen(true)}
+              className="shrink-0 rounded border border-slate-300 px-3 py-1 text-sm text-slate-700"
+            >
+              History
+            </button>
+          )}
         </div>
         <TagPicker
           tags={tagsQuery.data ?? []}
@@ -248,6 +268,14 @@ export function NoteEditorPage(): ReactElement {
             noteId={noteId}
             open={shareModalOpen}
             onClose={() => setShareModalOpen(false)}
+          />
+        )}
+        {noteId !== null && (
+          <VersionHistoryDrawer
+            noteId={noteId}
+            open={historyDrawerOpen}
+            onClose={() => setHistoryDrawerOpen(false)}
+            onRestored={handleRestored}
           />
         )}
       </main>
