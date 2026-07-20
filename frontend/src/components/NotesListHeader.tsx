@@ -1,10 +1,10 @@
 import { useState, type ReactElement } from "react";
 import { useNavigate } from "react-router-dom";
 
-import { useAuthStore } from "../../stores/authStore.js";
-import { logout } from "./authApi.js";
+import { logout } from "../features/auth/authApi.js";
+import { useAuthStore } from "../stores/authStore.js";
 
-export function AuthenticatedPlaceholderPage(): ReactElement {
+export function NotesListHeader(): ReactElement {
   const navigate = useNavigate();
   const user = useAuthStore((state) => state.user);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
@@ -19,19 +19,19 @@ export function AuthenticatedPlaceholderPage(): ReactElement {
   }
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-slate-50">
-      <div className="w-full max-w-sm space-y-4 rounded-lg bg-white p-8 text-center shadow">
-        <h1 className="text-2xl font-semibold text-slate-900">Take Note</h1>
-        <p className="text-sm text-slate-600">Signed in as {user?.email}</p>
+    <header className="flex items-center justify-between border-b border-slate-200 bg-white px-6 py-4">
+      <h1 className="text-lg font-semibold text-slate-900">Take Note</h1>
+      <div className="flex items-center gap-4">
+        <span className="text-sm text-slate-600">{user?.email}</span>
         <button
           type="button"
           onClick={() => void handleLogout()}
           disabled={isLoggingOut}
-          className="w-full rounded bg-slate-900 px-4 py-2 text-white disabled:opacity-50"
+          className="rounded bg-slate-900 px-3 py-1.5 text-sm text-white disabled:opacity-50"
         >
           {isLoggingOut ? "Logging out…" : "Log out"}
         </button>
       </div>
-    </main>
+    </header>
   );
 }
