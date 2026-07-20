@@ -1,11 +1,11 @@
 import type { ReactElement } from "react";
 import { BrowserRouter, Route, Routes } from "react-router-dom";
 
-import { AuthenticatedPlaceholderPage } from "../features/auth/AuthenticatedPlaceholderPage.js";
 import { ForgotPasswordPage } from "../features/auth/ForgotPasswordPage.js";
 import { LoginPage } from "../features/auth/LoginPage.js";
 import { RegisterPage } from "../features/auth/RegisterPage.js";
 import { ResetPasswordPage } from "../features/auth/ResetPasswordPage.js";
+import { NotesListPage } from "../features/notes/NotesListPage.js";
 import { ProtectedRoute } from "./ProtectedRoute.js";
 
 export function AppRouter(): ReactElement {
@@ -20,7 +20,7 @@ export function AppRouter(): ReactElement {
           path="/"
           element={
             <ProtectedRoute>
-              <AuthenticatedPlaceholderPage />
+              <NotesListPage />
             </ProtectedRoute>
           }
         />
