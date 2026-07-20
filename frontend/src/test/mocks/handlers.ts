@@ -40,11 +40,20 @@ type NoteFixture = {
   createdAt: string;
   updatedAt: string;
   tagIds: string[];
+  content: unknown;
 };
 
 function noteId(n: number): string {
   return `10000000-0000-4000-8000-${String(n).padStart(12, "0")}`;
 }
+
+export const NEW_NOTE_ID = "10000000-0000-4000-8000-000000000099";
+export const NOT_FOUND_NOTE_ID = "10000000-0000-4000-8000-000000000404";
+export const FORBIDDEN_NOTE_ID = "10000000-0000-4000-8000-000000000403";
+export const EDITABLE_NOTE_ID = noteId(1);
+export const EDITABLE_NOTE_BODY_TEXT = "Note 1 body content";
+
+const EMPTY_DOC = { type: "doc", content: [{ type: "paragraph" }] };
 
 const NOTES_FIXTURE_COUNT = 12;
 
@@ -60,12 +69,22 @@ const NOTES_FIXTURE: NoteFixture[] = Array.from({ length: NOTES_FIXTURE_COUNT },
           : n === 4
             ? [TAG_URGENT_ID]
             : [];
+  const content =
+    n === 1
+      ? {
+          type: "doc",
+          content: [
+            { type: "paragraph", content: [{ type: "text", text: EDITABLE_NOTE_BODY_TEXT }] },
+          ],
+        }
+      : EMPTY_DOC;
   return {
     id: noteId(n),
     title: `Note ${n}`,
     createdAt: new Date(2026, 0, n).toISOString(),
     updatedAt: new Date(2026, 0, NOTES_FIXTURE_COUNT + 1 - n).toISOString(),
     tagIds,
+    content,
   };
 });
 
@@ -73,7 +92,7 @@ function noteToDto(note: NoteFixture) {
   return {
     id: note.id,
     title: note.title,
-    content: { type: "doc", content: [] },
+    content: note.content,
     createdAt: note.createdAt,
     updatedAt: note.updatedAt,
     tags: note.tagIds
@@ -116,6 +135,89 @@ export const handlers: HttpHandler[] = [
         totalPages: Math.max(1, Math.ceil(totalCount / limit)),
       },
     });
+  }),
+
+  http.post("/api/notes", async ({ request }) => {
+    const body = (await request.json()) as {
+      title: string;
+      content: unknown;
+      tagIds?: string[];
+    };
+    const now = new Date().toISOString();
+    return HttpResponse.json(
+      noteToDto({
+        id: NEW_NOTE_ID,
+        title: body.title,
+        createdAt: now,
+        updatedAt: now,
+        tagIds: body.tagIds ?? [],
+        content: body.content,
+      }),
+      { status: 201 },
+    );
+  }),
+
+  http.get("/api/notes/:id", ({ params }) => {
+    const id = params.id as string;
+
+    if (id === FORBIDDEN_NOTE_ID) {
+      return HttpResponse.json(
+        { code: "FORBIDDEN", message: "You do not have access to this note." },
+        { status: 403 },
+      );
+    }
+
+    if (id === NEW_NOTE_ID) {
+      const now = new Date().toISOString();
+      return HttpResponse.json(
+        noteToDto({
+          id: NEW_NOTE_ID,
+          title: "Untitled",
+          createdAt: now,
+          updatedAt: now,
+          tagIds: [],
+          content: EMPTY_DOC,
+        }),
+      );
+    }
+
+    const note = NOTES_FIXTURE.find((fixture) => fixture.id === id);
+    if (!note) {
+      return HttpResponse.json({ code: "NOT_FOUND", message: "Note not found." }, { status: 404 });
+    }
+    return HttpResponse.json(noteToDto(note));
+  }),
+
+  http.put("/api/notes/:id", async ({ request, params }) => {
+    const id = params.id as string;
+
+    if (id === FORBIDDEN_NOTE_ID) {
+      return HttpResponse.json(
+        { code: "FORBIDDEN", message: "You do not have access to this note." },
+        { status: 403 },
+      );
+    }
+
+    const existing = NOTES_FIXTURE.find((fixture) => fixture.id === id);
+    if (!existing && id !== NEW_NOTE_ID) {
+      return HttpResponse.json({ code: "NOT_FOUND", message: "Note not found." }, { status: 404 });
+    }
+
+    const body = (await request.json()) as {
+      title: string;
+      content: unknown;
+      tagIds?: string[];
+    };
+    return HttpResponse.json(
+      noteToDto({
+        id,
+        title: body.title,
+        createdAt: existing?.createdAt ?? new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        tagIds: body.tagIds ?? [],
+        content: body.content,
+      }),
+    );
   }),
 
   http.get("/api/tags", () => {

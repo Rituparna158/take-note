@@ -5,6 +5,7 @@ import { ForgotPasswordPage } from "../features/auth/ForgotPasswordPage.js";
 import { LoginPage } from "../features/auth/LoginPage.js";
 import { RegisterPage } from "../features/auth/RegisterPage.js";
 import { ResetPasswordPage } from "../features/auth/ResetPasswordPage.js";
+import { NoteEditorPage } from "../features/notes/NoteEditorPage.js";
 import { NotesListPage } from "../features/notes/NotesListPage.js";
 import { ProtectedRoute } from "./ProtectedRoute.js";
 
@@ -21,6 +22,22 @@ export function AppRouter(): ReactElement {
           element={
             <ProtectedRoute>
               <NotesListPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/notes/new"
+          element={
+            <ProtectedRoute>
+              <NoteEditorPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/notes/:id"
+          element={
+            <ProtectedRoute>
+              <NoteEditorPage />
             </ProtectedRoute>
           }
         />
