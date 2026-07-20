@@ -88,6 +88,29 @@ const NOTES_FIXTURE: NoteFixture[] = Array.from({ length: NOTES_FIXTURE_COUNT },
   };
 });
 
+function extractPlainText(node: unknown): string {
+  if (node === null || typeof node !== "object") {
+    return "";
+  }
+  const record = node as Record<string, unknown>;
+  const ownText = typeof record.text === "string" ? record.text : "";
+  const childContent = Array.isArray(record.content)
+    ? record.content.map(extractPlainText).join(" ")
+    : "";
+  return [ownText, childContent].filter(Boolean).join(" ");
+}
+
+function buildHighlight(searchableText: string, q: string): string {
+  const index = searchableText.toLowerCase().indexOf(q.toLowerCase());
+  if (index === -1) {
+    return searchableText.slice(0, 60);
+  }
+  const before = searchableText.slice(Math.max(0, index - 20), index);
+  const match = searchableText.slice(index, index + q.length);
+  const after = searchableText.slice(index + q.length, index + q.length + 20);
+  return `${before}<mark>${match}</mark>${after}`;
+}
+
 function noteToDto(note: NoteFixture) {
   return {
     id: note.id,
@@ -218,6 +241,35 @@ export const handlers: HttpHandler[] = [
         content: body.content,
       }),
     );
+  }),
+
+  http.get("/api/search", ({ request }) => {
+    const url = new URL(request.url);
+    const q = url.searchParams.get("q") ?? "";
+    const page = Number(url.searchParams.get("page") ?? "1");
+    const limit = Number(url.searchParams.get("limit") ?? "10");
+
+    const matches = NOTES_FIXTURE.filter((note) => {
+      const searchableText = `${note.title} ${extractPlainText(note.content)}`;
+      return searchableText.toLowerCase().includes(q.toLowerCase());
+    });
+
+    const totalCount = matches.length;
+    const start = (page - 1) * limit;
+    const pageMatches = matches.slice(start, start + limit);
+
+    return HttpResponse.json({
+      data: pageMatches.map((note) => ({
+        ...noteToDto(note),
+        highlight: buildHighlight(`${note.title} ${extractPlainText(note.content)}`, q),
+      })),
+      meta: {
+        totalCount,
+        page,
+        limit,
+        totalPages: Math.max(1, Math.ceil(totalCount / limit)),
+      },
+    });
   }),
 
   http.get("/api/tags", () => {

@@ -1,5 +1,5 @@
 import { useState, type ReactElement } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 
 import { logout } from "../features/auth/authApi.js";
 import { useAuthStore } from "../stores/authStore.js";
@@ -23,6 +23,9 @@ export function NotesListHeader(): ReactElement {
       <h1 className="text-lg font-semibold text-slate-900">Take Note</h1>
       <div className="flex items-center gap-4">
         <span className="text-sm text-slate-600">{user?.email}</span>
+        <Link to="/search" className="rounded bg-slate-900 px-3 py-1.5 text-sm text-white">
+          Search
+        </Link>
         <button
           type="button"
           onClick={() => navigate("/notes/new")}
