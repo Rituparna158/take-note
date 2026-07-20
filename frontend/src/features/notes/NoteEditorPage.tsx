@@ -8,6 +8,7 @@ import { useTagsQuery } from "../tags/useTagsQuery.js";
 import { useEditorStore } from "../../stores/editorStore.js";
 import { useNoteStore } from "../../stores/noteStore.js";
 import { PasteSanitizeExtension } from "./pasteSanitizeExtension.js";
+import { ShareModal } from "./ShareModal.js";
 import { TagPicker } from "./TagPicker.js";
 import { useAutosave, type AutosaveValue } from "./useAutosave.js";
 import { useCreateNoteMutation } from "./useCreateNoteMutation.js";
@@ -27,6 +28,7 @@ export function NoteEditorPage(): ReactElement {
   const [appliedNoteId, setAppliedNoteId] = useState<string | null>(null);
   const [createdLocally, setCreatedLocally] = useState(false);
   const [persistedSnapshot, setPersistedSnapshot] = useState<AutosaveValue | null>(null);
+  const [shareModalOpen, setShareModalOpen] = useState(false);
   const hasFiredCreateRef = useRef(false);
 
   const editor = useEditor({
@@ -208,13 +210,24 @@ export function NoteEditorPage(): ReactElement {
   return (
     <div className="min-h-screen bg-slate-50">
       <main className="mx-auto max-w-3xl space-y-4 px-6 py-8">
-        <input
-          type="text"
-          value={title}
-          onChange={(event) => setTitle(event.target.value)}
-          aria-label="Note title"
-          className="w-full border-b border-slate-300 bg-transparent text-2xl font-semibold text-slate-900 focus:outline-none"
-        />
+        <div className="flex items-center gap-3">
+          <input
+            type="text"
+            value={title}
+            onChange={(event) => setTitle(event.target.value)}
+            aria-label="Note title"
+            className="w-full border-b border-slate-300 bg-transparent text-2xl font-semibold text-slate-900 focus:outline-none"
+          />
+          {noteId !== null && (
+            <button
+              type="button"
+              onClick={() => setShareModalOpen(true)}
+              className="shrink-0 rounded border border-slate-300 px-3 py-1 text-sm text-slate-700"
+            >
+              Share
+            </button>
+          )}
+        </div>
         <TagPicker
           tags={tagsQuery.data ?? []}
           selectedTagIds={tagIds}
@@ -229,6 +242,13 @@ export function NoteEditorPage(): ReactElement {
           <p role="alert" className="text-xs text-red-600">
             Your latest changes could not be saved. Please check your connection and try again.
           </p>
+        )}
+        {noteId !== null && (
+          <ShareModal
+            noteId={noteId}
+            open={shareModalOpen}
+            onClose={() => setShareModalOpen(false)}
+          />
         )}
       </main>
     </div>

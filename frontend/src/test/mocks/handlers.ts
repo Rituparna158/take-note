@@ -243,6 +243,25 @@ export const handlers: HttpHandler[] = [
     );
   }),
 
+  http.post("/api/notes/:id/share", async ({ request }) => {
+    const body = (await request.json().catch(() => ({}))) as { expiresInDays?: number };
+    const days = body.expiresInDays ?? 7;
+    const expiresAt = new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString();
+    return HttpResponse.json(
+      {
+        shareLink: "http://localhost:5173/share/test-share-token",
+        expiresAt,
+        viewCount: 0,
+        revoked: false,
+      },
+      { status: 201 },
+    );
+  }),
+
+  http.delete("/api/notes/:id/share", () => {
+    return HttpResponse.json({ message: "Share link revoked successfully" }, { status: 200 });
+  }),
+
   http.get("/api/search", ({ request }) => {
     const url = new URL(request.url);
     const q = url.searchParams.get("q") ?? "";
