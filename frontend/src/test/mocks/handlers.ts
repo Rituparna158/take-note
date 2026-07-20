@@ -55,6 +55,49 @@ export const EDITABLE_NOTE_BODY_TEXT = "Note 1 body content";
 
 const EMPTY_DOC = { type: "doc", content: [{ type: "paragraph" }] };
 
+export const VERSION_1_ID = "30000000-0000-4000-8000-000000000001";
+export const VERSION_2_ID = "30000000-0000-4000-8000-000000000002";
+export const RESTORE_FAILING_VERSION_ID = "30000000-0000-4000-8000-000000000003";
+
+type VersionFixture = {
+  id: string;
+  version: number;
+  title: string;
+  content: unknown;
+  savedAt: string;
+};
+
+const VERSIONS_BY_NOTE_ID: Record<string, VersionFixture[]> = {
+  [EDITABLE_NOTE_ID]: [
+    {
+      id: VERSION_1_ID,
+      version: 1,
+      title: "Note 1 (draft)",
+      content: EMPTY_DOC,
+      savedAt: new Date(Date.UTC(2026, 0, 1)).toISOString(),
+    },
+    {
+      id: VERSION_2_ID,
+      version: 2,
+      title: "Note 1",
+      content: {
+        type: "doc",
+        content: [
+          { type: "paragraph", content: [{ type: "text", text: EDITABLE_NOTE_BODY_TEXT }] },
+        ],
+      },
+      savedAt: new Date(Date.UTC(2026, 0, 2)).toISOString(),
+    },
+    {
+      id: RESTORE_FAILING_VERSION_ID,
+      version: 3,
+      title: "Note 1 (restore fails)",
+      content: EMPTY_DOC,
+      savedAt: new Date(Date.UTC(2026, 0, 3)).toISOString(),
+    },
+  ],
+};
+
 const NOTES_FIXTURE_COUNT = 12;
 
 const NOTES_FIXTURE: NoteFixture[] = Array.from({ length: NOTES_FIXTURE_COUNT }, (_, index) => {
@@ -241,6 +284,61 @@ export const handlers: HttpHandler[] = [
         content: body.content,
       }),
     );
+  }),
+
+  http.get("/api/notes/:id/versions", ({ params }) => {
+    const id = params.id as string;
+    const versions = VERSIONS_BY_NOTE_ID[id] ?? [];
+    return HttpResponse.json(
+      versions.map(({ id: versionId, version, title, savedAt }) => ({
+        id: versionId,
+        version,
+        title,
+        savedAt,
+      })),
+    );
+  }),
+
+  http.get("/api/notes/:id/versions/:versionId", ({ params }) => {
+    const id = params.id as string;
+    const versionId = params.versionId as string;
+    const version = (VERSIONS_BY_NOTE_ID[id] ?? []).find((entry) => entry.id === versionId);
+    if (!version) {
+      return HttpResponse.json(
+        { code: "NOT_FOUND", message: "Version not found." },
+        { status: 404 },
+      );
+    }
+    return HttpResponse.json(version);
+  }),
+
+  http.post("/api/notes/:id/versions/:versionId/restore", ({ params }) => {
+    const id = params.id as string;
+    const versionId = params.versionId as string;
+
+    if (versionId === RESTORE_FAILING_VERSION_ID) {
+      return HttpResponse.json(
+        {
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Something went wrong while restoring this version.",
+        },
+        { status: 500 },
+      );
+    }
+
+    const version = (VERSIONS_BY_NOTE_ID[id] ?? []).find((entry) => entry.id === versionId);
+    if (!version) {
+      return HttpResponse.json(
+        { code: "NOT_FOUND", message: "Version not found." },
+        { status: 404 },
+      );
+    }
+    return HttpResponse.json({
+      id,
+      title: version.title,
+      content: version.content,
+      version: version.version + 1,
+    });
   }),
 
   http.post("/api/notes/:id/share", async ({ request }) => {

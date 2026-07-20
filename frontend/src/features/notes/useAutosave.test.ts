@@ -113,4 +113,25 @@ describe("useAutosave", () => {
     expect(onSave).toHaveBeenCalledWith(driftedValue);
     expect(useEditorStore.getState().status).toBe("saved");
   });
+
+  it("markSaved re-baselines the dirty check so a value saved outside onSave is not re-saved", async () => {
+    const onSave = vi.fn().mockResolvedValue(undefined);
+    const restoredValue = withTitle("Restored externally");
+    const { result, rerender } = renderHook(
+      ({ value }: { value: AutosaveValue }) =>
+        useAutosave({ enabled: true, value, initialSnapshot: BASE_VALUE, onSave }),
+      { initialProps: { value: BASE_VALUE } },
+    );
+
+    act(() => {
+      result.current.markSaved(restoredValue);
+    });
+    rerender({ value: restoredValue });
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(2000);
+    });
+
+    expect(onSave).not.toHaveBeenCalled();
+  });
 });

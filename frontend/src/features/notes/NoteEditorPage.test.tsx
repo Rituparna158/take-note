@@ -490,6 +490,89 @@ describe("NoteEditorPage", () => {
     expect(await screen.findByRole("dialog", { name: "Share note" })).toBeVisible();
   });
 
+  it("The History button is not shown until a new note has been created", async () => {
+    useAuthStore.setState({
+      accessToken: "test-access-token",
+      user: AUTHENTICATED_USER,
+      status: "authenticated",
+    });
+    server.use(
+      http.post("/api/notes", async () => {
+        await delay("infinite");
+        return HttpResponse.json({});
+      }),
+    );
+
+    renderEditor("/notes/new");
+
+    await screen.findByLabelText("Note title");
+    expect(screen.queryByRole("button", { name: "History" })).not.toBeInTheDocument();
+  });
+
+  it("The History button opens the version-history drawer for a persisted note", async () => {
+    useAuthStore.setState({
+      accessToken: "test-access-token",
+      user: AUTHENTICATED_USER,
+      status: "authenticated",
+    });
+    const user = userEvent.setup();
+
+    renderEditor(`/notes/${EDITABLE_NOTE_ID}`);
+
+    await screen.findByLabelText("Note title");
+    await user.click(screen.getByRole("button", { name: "History" }));
+
+    expect(await screen.findByRole("dialog", { name: "Version history" })).toBeVisible();
+  });
+
+  it("Restoring a version updates the displayed title and content", async () => {
+    useAuthStore.setState({
+      accessToken: "test-access-token",
+      user: AUTHENTICATED_USER,
+      status: "authenticated",
+    });
+    const user = userEvent.setup();
+
+    renderEditor(`/notes/${EDITABLE_NOTE_ID}`);
+
+    await screen.findByText(EDITABLE_NOTE_BODY_TEXT);
+    await user.click(screen.getByRole("button", { name: "History" }));
+    await user.click(await screen.findByRole("button", { name: "Version 1 — 2026-01-01" }));
+    await user.click(await screen.findByRole("button", { name: "Restore version 1" }));
+
+    await waitFor(() => {
+      expect(screen.getByLabelText("Note title")).toHaveValue("Note 1 (draft)");
+    });
+    expect(screen.queryByText(EDITABLE_NOTE_BODY_TEXT)).not.toBeInTheDocument();
+  });
+
+  it("Restoring a version does not trigger a redundant autosave save", async () => {
+    useAuthStore.setState({
+      accessToken: "test-access-token",
+      user: AUTHENTICATED_USER,
+      status: "authenticated",
+    });
+    const user = userEvent.setup();
+    const putBodies = capturePutRequests();
+
+    renderEditor(`/notes/${EDITABLE_NOTE_ID}`);
+
+    await screen.findByText(EDITABLE_NOTE_BODY_TEXT);
+    await user.click(screen.getByRole("button", { name: "History" }));
+    await user.click(await screen.findByRole("button", { name: "Version 1 — 2026-01-01" }));
+    await user.click(await screen.findByRole("button", { name: "Restore version 1" }));
+
+    await waitFor(() => {
+      expect(screen.getByLabelText("Note title")).toHaveValue("Note 1 (draft)");
+    });
+
+    // Wait past the 2s autosave debounce; restoring must not queue a follow-up PUT
+    // on top of the restore the drawer already performed.
+    await new Promise((resolve) => setTimeout(resolve, 2500));
+
+    expect(putBodies.length).toBe(0);
+  }, 6000);
+
   it("Fetch failure: Back to Notes navigates to the notes list", async () => {
     useAuthStore.setState({
       accessToken: "test-access-token",
