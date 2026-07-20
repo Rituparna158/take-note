@@ -7,6 +7,7 @@ import { RegisterPage } from "../features/auth/RegisterPage.js";
 import { ResetPasswordPage } from "../features/auth/ResetPasswordPage.js";
 import { NoteEditorPage } from "../features/notes/NoteEditorPage.js";
 import { NotesListPage } from "../features/notes/NotesListPage.js";
+import { SearchPage } from "../features/search/SearchPage.js";
 import { ProtectedRoute } from "./ProtectedRoute.js";
 
 export function AppRouter(): ReactElement {
@@ -38,6 +39,14 @@ export function AppRouter(): ReactElement {
           element={
             <ProtectedRoute>
               <NoteEditorPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/search"
+          element={
+            <ProtectedRoute>
+              <SearchPage />
             </ProtectedRoute>
           }
         />
