@@ -25,6 +25,7 @@ function renderPage() {
           <Route path="/login" element={<div>Login page</div>} />
           <Route path="/notes/new" element={<div>New note editor page</div>} />
           <Route path="/notes/:id" element={<div>Note editor page</div>} />
+          <Route path="/search" element={<div>Search page</div>} />
         </Routes>
       </MemoryRouter>
     </QueryClientProvider>,
@@ -259,6 +260,23 @@ describe("NotesListPage", () => {
 
     await waitFor(() => {
       expect(screen.getByText("New note editor page")).toBeVisible();
+    });
+  });
+
+  it("Header provides navigation to the search page", async () => {
+    useAuthStore.setState({
+      accessToken: "test-access-token",
+      user: AUTHENTICATED_USER,
+      status: "authenticated",
+    });
+    const user = userEvent.setup();
+
+    renderPage();
+
+    await user.click(await screen.findByRole("link", { name: "Search" }));
+
+    await waitFor(() => {
+      expect(screen.getByText("Search page")).toBeVisible();
     });
   });
 
