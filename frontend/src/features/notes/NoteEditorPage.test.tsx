@@ -474,6 +474,22 @@ describe("NoteEditorPage", () => {
     expect(await screen.findByLabelText("Note title")).toHaveValue("Note 1");
   });
 
+  it("The Share button opens the share modal for a persisted note", async () => {
+    useAuthStore.setState({
+      accessToken: "test-access-token",
+      user: AUTHENTICATED_USER,
+      status: "authenticated",
+    });
+    const user = userEvent.setup();
+
+    renderEditor(`/notes/${EDITABLE_NOTE_ID}`);
+
+    await screen.findByLabelText("Note title");
+    await user.click(screen.getByRole("button", { name: "Share" }));
+
+    expect(await screen.findByRole("dialog", { name: "Share note" })).toBeVisible();
+  });
+
   it("Fetch failure: Back to Notes navigates to the notes list", async () => {
     useAuthStore.setState({
       accessToken: "test-access-token",
