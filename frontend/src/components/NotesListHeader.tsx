@@ -26,6 +26,9 @@ export function NotesListHeader(): ReactElement {
         <Link to="/search" className="rounded bg-slate-900 px-3 py-1.5 text-sm text-white">
           Search
         </Link>
+        <Link to="/trash" className="rounded bg-slate-900 px-3 py-1.5 text-sm text-white">
+          Trash
+        </Link>
         <button
           type="button"
           onClick={() => navigate("/notes/new")}

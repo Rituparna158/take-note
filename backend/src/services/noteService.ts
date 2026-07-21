@@ -135,6 +135,35 @@ export async function listActiveNotes(
   };
 }
 
+export async function listSoftDeletedNotes(
+  userId: string,
+  query: ListNotesQuery,
+): Promise<NoteListResponse> {
+  const where: Prisma.NoteWhereInput = {
+    userId,
+    deletedAt: { not: null },
+  };
+
+  const [notes, totalCount] = await Promise.all([
+    prisma.note.findMany({
+      where,
+      orderBy: { updatedAt: "desc" },
+      skip: (query.page - 1) * query.limit,
+      take: query.limit,
+      include: noteWithTagsInclude,
+    }),
+    prisma.note.count({ where }),
+  ]);
+
+  const data = notes.map(toNoteResponse);
+  const totalPages = totalCount === 0 ? 0 : Math.ceil(totalCount / query.limit);
+
+  return {
+    data,
+    meta: { totalCount, page: query.page, limit: query.limit, totalPages },
+  };
+}
+
 export async function updateNote(
   userId: string,
   noteId: string,

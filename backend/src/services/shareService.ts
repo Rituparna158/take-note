@@ -54,6 +54,32 @@ export async function generateShareLink(
   };
 }
 
+export async function getActiveShareLink(
+  userId: string,
+  noteId: string,
+): Promise<{ viewCount: number; expiresAt: string; revoked: boolean } | null> {
+  await findOwnedNoteOrThrow(userId, noteId, "active");
+
+  const shareLink = await prisma.shareLink.findFirst({
+    where: {
+      noteId,
+      revoked: false,
+      expiresAt: { gt: new Date() },
+    },
+    orderBy: { createdAt: "desc" },
+  });
+
+  if (!shareLink) {
+    return null;
+  }
+
+  return {
+    expiresAt: shareLink.expiresAt.toISOString(),
+    viewCount: shareLink.viewCount,
+    revoked: shareLink.revoked,
+  };
+}
+
 export async function revokeShareLink(userId: string, noteId: string): Promise<void> {
   await findOwnedNoteOrThrow(userId, noteId, "active");
 

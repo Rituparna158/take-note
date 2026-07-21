@@ -2,6 +2,7 @@ import { useState, type ReactElement } from "react";
 import type { ShareLinkResponse } from "@take-note/shared";
 
 import { ApiError } from "../../lib/apiClient.js";
+import { getShareLinkStatus } from "./shareApi.js";
 import { useGenerateShareLinkMutation } from "./useGenerateShareLinkMutation.js";
 import { useRevokeShareLinkMutation } from "./useRevokeShareLinkMutation.js";
 
@@ -32,6 +33,7 @@ export function ShareModal({ noteId, open, onClose }: ShareModalProps): ReactEle
   const [expirationPreset, setExpirationPreset] = useState<ExpirationPreset>("default");
   const [shareLink, setShareLink] = useState<ShareLinkResponse | null>(null);
   const [revoked, setRevoked] = useState(false);
+  const [copied, setCopied] = useState(false);
   const [generateError, setGenerateError] = useState<string | null>(null);
   const [revokeError, setRevokeError] = useState<string | null>(null);
 
@@ -73,6 +75,22 @@ export function ShareModal({ noteId, open, onClose }: ShareModalProps): ReactEle
         );
       },
     });
+  }
+
+  async function handleRefreshViews(): Promise<void> {
+    try {
+      const status = await getShareLinkStatus(noteId);
+      if (shareLink) {
+        setShareLink({
+          ...shareLink,
+          viewCount: status.viewCount,
+          expiresAt: status.expiresAt,
+          revoked: status.revoked,
+        });
+      }
+    } catch {
+      // ignore error
+    }
   }
 
   return (
@@ -131,16 +149,42 @@ export function ShareModal({ noteId, open, onClose }: ShareModalProps): ReactEle
             <p className="text-xs text-slate-500">
               Generating a new link replaces any previously shared link.
             </p>
-            <p className="break-all text-sm text-slate-900">{shareLink.shareLink}</p>
-            <p className="text-xs text-slate-500">Expires: {formatDate(shareLink.expiresAt)}</p>
-            <p className="text-xs text-slate-500">Views: {shareLink.viewCount}</p>
-            <button
-              type="button"
-              onClick={handleRevoke}
-              className="rounded border border-red-300 px-3 py-1 text-xs text-red-700"
-            >
-              Revoke link
-            </button>
+            <p className="break-all text-sm text-slate-900 font-mono bg-slate-50 p-2 rounded border border-slate-200">
+              {shareLink.shareLink}
+            </p>
+            <div className="flex items-center justify-between text-xs text-slate-500">
+              <span>Expires: {formatDate(shareLink.expiresAt)}</span>
+              <div className="flex items-center gap-2">
+                <span className="font-semibold text-slate-700">Views: {shareLink.viewCount}</span>
+                <button
+                  type="button"
+                  onClick={() => void handleRefreshViews()}
+                  className="text-xs font-medium text-slate-600 hover:text-slate-900 underline"
+                >
+                  Refresh Views
+                </button>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 pt-1">
+              <button
+                type="button"
+                onClick={() => {
+                  void navigator.clipboard.writeText(shareLink.shareLink);
+                  setCopied(true);
+                  setTimeout(() => setCopied(false), 2000);
+                }}
+                className="rounded bg-slate-100 px-3 py-1 text-xs font-medium text-slate-700 hover:bg-slate-200 transition-colors"
+              >
+                {copied ? "Copied!" : "Copy Link"}
+              </button>
+              <button
+                type="button"
+                onClick={handleRevoke}
+                className="rounded border border-red-300 px-3 py-1 text-xs text-red-700 hover:bg-red-50 transition-colors"
+              >
+                Revoke link
+              </button>
+            </div>
           </div>
         )}
 

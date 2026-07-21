@@ -24,3 +24,13 @@ export async function revokeShareLink(noteId: string): Promise<void> {
     path: `/api/notes/${noteId}/share`,
   });
 }
+
+export async function getShareLinkStatus(
+  noteId: string,
+): Promise<{ viewCount: number; expiresAt: string; revoked: boolean }> {
+  const response = await apiRequest<unknown>({
+    method: "GET",
+    path: `/api/notes/${noteId}/share`,
+  });
+  return response as { viewCount: number; expiresAt: string; revoked: boolean };
+}

@@ -60,3 +60,26 @@ export async function updateNote(id: string, payload: UpdateNoteRequest): Promis
   });
   return noteResponseSchema.parse(response);
 }
+
+export async function deleteNote(id: string): Promise<void> {
+  await apiRequest<unknown>({
+    method: "DELETE",
+    path: `/api/notes/${id}`,
+  });
+}
+
+export async function restoreNote(id: string): Promise<NoteResponse> {
+  const response = await apiRequest<unknown>({
+    method: "POST",
+    path: `/api/notes/${id}/restore`,
+  });
+  return noteResponseSchema.parse(response);
+}
+
+export async function getTrashNotes(): Promise<NoteListResponse> {
+  const response = await apiRequest<unknown>({
+    method: "GET",
+    path: "/api/notes/trash",
+  });
+  return noteListResponseSchema.parse(response);
+}
