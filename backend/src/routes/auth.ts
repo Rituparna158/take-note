@@ -17,7 +17,6 @@ import {
 } from "../middleware/authRateLimiters.js";
 import { AppError } from "../middleware/errorHandler.js";
 import { loginUser, logoutUser, refreshSession, registerUser } from "../services/authService.js";
-import type { AuthResult } from "../services/authService.js";
 import { requestPasswordReset, resetPassword } from "../services/passwordResetService.js";
 
 const REFRESH_COOKIE_NAME = "refreshToken";
@@ -34,20 +33,22 @@ function zodIssuesToFields(
   return fields;
 }
 
-function setRefreshCookie(res: Response, refreshToken: AuthResult["refreshToken"]): void {
+function setRefreshCookie(res: Response, refreshToken: { token: string; expiresAt: Date }): void {
+  const isProduction = process.env.NODE_ENV === "production";
   res.cookie(REFRESH_COOKIE_NAME, refreshToken.token, {
     httpOnly: true,
-    secure: true,
-    sameSite: "strict",
+    secure: isProduction,
+    sameSite: "lax",
     maxAge: REFRESH_COOKIE_MAX_AGE_MS,
   });
 }
 
 function clearRefreshCookie(res: Response): void {
+  const isProduction = process.env.NODE_ENV === "production";
   res.clearCookie(REFRESH_COOKIE_NAME, {
     httpOnly: true,
-    secure: true,
-    sameSite: "strict",
+    secure: isProduction,
+    sameSite: "lax",
   });
 }
 

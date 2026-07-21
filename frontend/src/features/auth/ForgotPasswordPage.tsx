@@ -2,7 +2,6 @@ import { useState, type FormEvent, type ReactElement } from "react";
 import { Link } from "react-router-dom";
 import { forgotPasswordRequestSchema } from "@take-note/shared";
 
-import { ApiError } from "../../lib/apiClient.js";
 import { forgotPassword } from "./authApi.js";
 
 export function ForgotPasswordPage(): ReactElement {
@@ -37,7 +36,7 @@ export function ForgotPasswordPage(): ReactElement {
       setConfirmationMessage(response.message);
     } catch (error) {
       setFormError(
-        error instanceof ApiError ? error.message : "Something went wrong. Please try again.",
+        error instanceof Error ? error.message : "Something went wrong. Please try again.",
       );
     } finally {
       setIsSubmitting(false);
