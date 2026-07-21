@@ -2,7 +2,6 @@ import { useState, type FormEvent, type ReactElement } from "react";
 import { Link } from "react-router-dom";
 import { resetPasswordRequestSchema } from "@take-note/shared";
 
-import { ApiError } from "../../lib/apiClient.js";
 import { resetPassword } from "./authApi.js";
 
 export function ResetPasswordPage(): ReactElement {
@@ -39,7 +38,7 @@ export function ResetPasswordPage(): ReactElement {
       setSuccessMessage(response.message);
     } catch (error) {
       setFormError(
-        error instanceof ApiError ? error.message : "Something went wrong. Please try again.",
+        error instanceof Error ? error.message : "Something went wrong. Please try again.",
       );
     } finally {
       setIsSubmitting(false);

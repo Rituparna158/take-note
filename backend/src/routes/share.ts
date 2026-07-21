@@ -4,7 +4,12 @@ import { Router, type Request, type Response } from "express";
 import { authenticateToken } from "../middleware/authenticateToken.js";
 import { AppError } from "../middleware/errorHandler.js";
 import { publicShareViewLimiter } from "../middleware/shareRateLimiters.js";
-import { generateShareLink, revokeShareLink, viewSharedNote } from "../services/shareService.js";
+import {
+  generateShareLink,
+  getActiveShareLink,
+  revokeShareLink,
+  viewSharedNote,
+} from "../services/shareService.js";
 
 function zodIssuesToFields(
   issues: ReadonlyArray<{ path: PropertyKey[]; message: string }>,
@@ -27,6 +32,15 @@ function requireUserId(req: Request): string {
 export const noteShareRouter: Router = Router({ mergeParams: true });
 
 noteShareRouter.use(authenticateToken);
+
+noteShareRouter.get("/", async (req: Request, res: Response) => {
+  const userId = requireUserId(req);
+  const result = await getActiveShareLink(userId, req.params.id as string);
+  if (!result) {
+    throw new AppError(404, "NOT_FOUND", "No active share link found for this note");
+  }
+  res.status(200).json(result);
+});
 
 noteShareRouter.post("/", async (req: Request, res: Response) => {
   const userId = requireUserId(req);

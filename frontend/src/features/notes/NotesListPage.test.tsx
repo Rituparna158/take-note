@@ -3,7 +3,7 @@ import { render, screen, waitFor, waitForElementToBeRemoved, within } from "@tes
 import userEvent from "@testing-library/user-event";
 import { delay, http, HttpResponse } from "msw";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { useAuthStore } from "../../stores/authStore.js";
 import { createTestQueryClient } from "../../test/createTestQueryClient.js";
@@ -298,6 +298,90 @@ describe("NotesListPage", () => {
     await waitFor(() => {
       expect(screen.getByText("Note editor page")).toBeVisible();
     });
+  });
+
+  it("Deleting a note asks for confirmation, then removes it from the list", async () => {
+    useAuthStore.setState({
+      accessToken: "test-access-token",
+      user: AUTHENTICATED_USER,
+      status: "authenticated",
+    });
+    const user = userEvent.setup();
+    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(true);
+    const NOTE_ID = "10000000-0000-4000-8000-000000000001";
+    let deleted = false;
+    server.use(
+      http.delete("/api/notes/:id", () => {
+        deleted = true;
+        return HttpResponse.json({ message: "Note deleted" });
+      }),
+      http.get("/api/notes", () =>
+        HttpResponse.json({
+          data: deleted
+            ? []
+            : [
+                {
+                  id: NOTE_ID,
+                  title: "Note 1",
+                  content: { type: "doc", content: [{ type: "paragraph" }] },
+                  createdAt: "2026-01-01T00:00:00.000Z",
+                  updatedAt: "2026-01-01T00:00:00.000Z",
+                  tags: [],
+                },
+              ],
+          meta: { totalCount: deleted ? 0 : 1, page: 1, limit: 10, totalPages: 1 },
+        }),
+      ),
+    );
+
+    renderPage();
+
+    const note1Item = (await screen.findByRole("heading", { name: "Note 1", level: 2 })).closest(
+      "li",
+    ) as HTMLElement;
+    await user.click(within(note1Item).getByRole("button", { name: "Delete" }));
+
+    expect(confirmSpy).toHaveBeenCalledWith(
+      expect.stringContaining('Are you sure you want to delete "Note 1"'),
+    );
+    await waitFor(() => {
+      expect(deleted).toBe(true);
+    });
+    await waitFor(() => {
+      expect(screen.queryByRole("heading", { name: "Note 1", level: 2 })).not.toBeInTheDocument();
+    });
+
+    confirmSpy.mockRestore();
+  });
+
+  it("Declining the delete confirmation keeps the note in the list", async () => {
+    useAuthStore.setState({
+      accessToken: "test-access-token",
+      user: AUTHENTICATED_USER,
+      status: "authenticated",
+    });
+    const user = userEvent.setup();
+    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(false);
+    let deleteCallCount = 0;
+    server.use(
+      http.delete("/api/notes/:id", () => {
+        deleteCallCount += 1;
+        return HttpResponse.json({ message: "Note deleted" });
+      }),
+    );
+
+    renderPage();
+
+    const note1Item = (await screen.findByRole("heading", { name: "Note 1", level: 2 })).closest(
+      "li",
+    ) as HTMLElement;
+    await user.click(within(note1Item).getByRole("button", { name: "Delete" }));
+
+    expect(confirmSpy).toHaveBeenCalled();
+    expect(deleteCallCount).toBe(0);
+    expect(screen.getByRole("heading", { name: "Note 1", level: 2 })).toBeVisible();
+
+    confirmSpy.mockRestore();
   });
 
   it("Failed fetch displays error feedback with retry control", async () => {

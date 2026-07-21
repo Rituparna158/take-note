@@ -2,7 +2,7 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, waitFor, type RenderResult } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { createTestQueryClient } from "../../test/createTestQueryClient.js";
 import { EDITABLE_NOTE_ID } from "../../test/mocks/handlers.js";
@@ -72,6 +72,46 @@ describe("ShareModal", () => {
 
     expect(await screen.findByText("Link revoked. It is no longer active.")).toBeVisible();
     expect(screen.queryByRole("button", { name: "Revoke link" })).not.toBeInTheDocument();
+  });
+
+  it("Owner copies the share link: the button confirms the copy", async () => {
+    const user = userEvent.setup();
+    const writeTextSpy = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, "clipboard", {
+      value: { writeText: writeTextSpy },
+      configurable: true,
+    });
+    renderShareModal();
+
+    await user.click(screen.getByRole("button", { name: "Generate link" }));
+    await screen.findByText("http://localhost:5173/share/test-share-token");
+
+    await user.click(screen.getByRole("button", { name: "Copy Link" }));
+
+    expect(writeTextSpy).toHaveBeenCalledWith("http://localhost:5173/share/test-share-token");
+    expect(await screen.findByRole("button", { name: "Copied!" })).toBeVisible();
+  });
+
+  it("Owner refreshes view count: the displayed count reflects the latest server value", async () => {
+    const user = userEvent.setup();
+    server.use(
+      http.get("/api/notes/:id/share", () =>
+        HttpResponse.json({
+          viewCount: 5,
+          expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+          revoked: false,
+        }),
+      ),
+    );
+    renderShareModal();
+
+    await user.click(screen.getByRole("button", { name: "Generate link" }));
+    await screen.findByText("http://localhost:5173/share/test-share-token");
+    expect(screen.getByText("Views: 0")).toBeVisible();
+
+    await user.click(screen.getByRole("button", { name: "Refresh Views" }));
+
+    expect(await screen.findByText("Views: 5")).toBeVisible();
   });
 
   it("Sharing operation fails: the user receives visible failure feedback", async () => {
