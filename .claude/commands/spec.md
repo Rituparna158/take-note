@@ -8,9 +8,9 @@ tags: [workflow, spec-driven, proposal]
 
 ---
 
-Create the specification proposal and its required OpenSpec delta spec(s) for a ticket. This is **Stage 1** of the project's Spec-Driven Development lifecycle:
+Create the feature specification (`spec.md`) and its required OpenSpec delta spec (`spec-delta.md`) for a ticket. This is **Stage 1** of the project's Spec-Driven Development lifecycle:
 
-**Proposal → Plan → Tasks → Implementation → Review → Archive**
+**Spec (spec.md) → Plan (plan.md) → Tasks (tasks.md) → Implementation → Review → Archive**
 
 Within OpenSpec's own artifact graph, `proposal` and `specs` are both foundation artifacts: `design` (the `/plan` output) and `specs` each depend only on `proposal`, and `tasks` depends on both `design` and `specs`. This command produces **both** foundation artifacts — the proposal and its delta spec(s) — so nothing downstream is missing later. It does **not** generate the implementation plan (`design.md`), task breakdown, or application code.
 
