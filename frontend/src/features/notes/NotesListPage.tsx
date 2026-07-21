@@ -7,6 +7,7 @@ import { NoteListItem } from "./NoteListItem.js";
 import { PaginationControls } from "./PaginationControls.js";
 import { SortControls, type SortBy, type SortOrder } from "./SortControls.js";
 import { TagFilterControls } from "./TagFilterControls.js";
+import { useDeleteNoteMutation } from "./useDeleteNoteMutation.js";
 import { useNotesQuery } from "./useNotesQuery.js";
 
 const PAGE_SIZE = 10;
@@ -16,7 +17,6 @@ export function NotesListPage(): ReactElement {
   const [sortBy, setSortBy] = useState<SortBy>("updatedAt");
   const [sortOrder, setSortOrder] = useState<SortOrder>("desc");
   const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
-
   const notesQuery = useNotesQuery({
     page,
     limit: PAGE_SIZE,
@@ -25,6 +25,17 @@ export function NotesListPage(): ReactElement {
     tags: selectedTagIds,
   });
   const tagsQuery = useTagsQuery();
+  const deleteNoteMutation = useDeleteNoteMutation();
+
+  function handleDeleteNote(id: string, title: string): void {
+    if (
+      window.confirm(
+        `Are you sure you want to delete "${title}"? It will be moved to soft-delete recovery.`,
+      )
+    ) {
+      deleteNoteMutation.mutate(id);
+    }
+  }
 
   function handleSortByChange(nextSortBy: SortBy): void {
     setSortBy(nextSortBy);
@@ -96,7 +107,11 @@ export function NotesListPage(): ReactElement {
             ) : (
               <ul className="space-y-3">
                 {notesQuery.data?.data.map((note) => (
-                  <NoteListItem key={note.id} note={note} />
+                  <NoteListItem
+                    key={note.id}
+                    note={note}
+                    onDelete={(id) => handleDeleteNote(id, note.title)}
+                  />
                 ))}
               </ul>
             )}

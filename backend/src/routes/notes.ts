@@ -11,6 +11,7 @@ import {
   createNote,
   getActiveNoteById,
   listActiveNotes,
+  listSoftDeletedNotes,
   restoreNote,
   softDeleteNote,
   updateNote,
@@ -69,6 +70,18 @@ notesRouter.get("/", async (req: Request, res: Response) => {
   }
 
   const result = await listActiveNotes(userId, parsed.data);
+  res.status(200).json(result);
+});
+
+notesRouter.get("/trash", async (req: Request, res: Response) => {
+  const userId = requireUserId(req);
+
+  const parsed = listNotesQuerySchema.safeParse(req.query);
+  const query = parsed.success
+    ? parsed.data
+    : { page: 1, limit: 20, sortBy: "updatedAt" as const, sortOrder: "desc" as const };
+
+  const result = await listSoftDeletedNotes(userId, query);
   res.status(200).json(result);
 });
 

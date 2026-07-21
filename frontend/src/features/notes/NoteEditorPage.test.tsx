@@ -190,6 +190,58 @@ describe("NoteEditorPage", () => {
     expect(JSON.stringify(lastBody?.content)).toContain("typed while creating");
   }, 8000);
 
+  it("Back to Notes clicked before creation resolves still persists the typed title, content, and tag", async () => {
+    useAuthStore.setState({
+      accessToken: "test-access-token",
+      user: AUTHENTICATED_USER,
+      status: "authenticated",
+    });
+    const user = userEvent.setup();
+    server.use(
+      http.post("/api/notes", async ({ request }) => {
+        const body = (await request.json()) as { title: string; content: unknown };
+        await delay(1000);
+        return HttpResponse.json(
+          {
+            id: NEW_NOTE_ID,
+            title: body.title,
+            content: body.content,
+            createdAt: "2026-01-01T00:00:00.000Z",
+            updatedAt: "2026-01-01T00:00:00.000Z",
+            tags: [],
+          },
+          { status: 201 },
+        );
+      }),
+    );
+    const putBodies = capturePutRequests();
+
+    const { container } = renderEditor("/notes/new");
+    const titleInput = await screen.findByLabelText("Note title");
+
+    // All of this happens while the initial "Untitled" creation POST (1000ms) is
+    // still in flight, i.e. noteId is still null.
+    fireEvent.change(titleInput, { target: { value: "Race Note" } });
+    const proseMirror = container.querySelector(".ProseMirror") as HTMLElement;
+    await user.click(proseMirror);
+    await user.type(proseMirror, "typed before create resolved");
+    await user.click(await screen.findByRole("checkbox", { name: "Personal" }));
+    await user.click(screen.getByRole("button", { name: /Back to Notes/ }));
+
+    await waitFor(
+      () => {
+        expect(screen.getByText("Notes list page")).toBeVisible();
+      },
+      { timeout: 5000 },
+    );
+
+    const lastBody = putBodies.at(-1);
+    expect(lastBody).toBeDefined();
+    expect(lastBody?.title).toBe("Race Note");
+    expect(JSON.stringify(lastBody?.content)).toContain("typed before create resolved");
+    expect(lastBody?.tagIds).toContain(TAG_PERSONAL_ID);
+  }, 8000);
+
   it("Opening an existing note loads its content into the editor", async () => {
     useAuthStore.setState({
       accessToken: "test-access-token",

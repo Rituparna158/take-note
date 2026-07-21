@@ -2,7 +2,6 @@ import { useState, type FormEvent, type ReactElement } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { registerRequestSchema } from "@take-note/shared";
 
-import { ApiError } from "../../lib/apiClient.js";
 import { register } from "./authApi.js";
 
 export function RegisterPage(): ReactElement {
@@ -37,7 +36,7 @@ export function RegisterPage(): ReactElement {
       navigate("/", { replace: true });
     } catch (error) {
       setFormError(
-        error instanceof ApiError ? error.message : "Something went wrong. Please try again.",
+        error instanceof Error ? error.message : "Something went wrong. Please try again.",
       );
     } finally {
       setIsSubmitting(false);
